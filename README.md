@@ -71,7 +71,13 @@ Welcome to **BuyTrek**, a powerful and scalable E-commerce API built with NestJS
 4. Start the application:
 
     ```bash
-    npm run start
+    npm run build
+    ```
+
+5. Start the application:
+
+    ```bash
+    npm run start:prod
     ```
 
 ## Usage
