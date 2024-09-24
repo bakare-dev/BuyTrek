@@ -33,10 +33,13 @@ export class UserService {
 
     constructor(
         @InjectRepository(User) private userRepository: Repository<User>,
+
         @InjectRepository(UserProfile)
         private userprofileRepository: Repository<UserProfile>,
+
         @InjectRepository(Address)
         private addressRepository: Repository<Address>,
+
         @Inject(CACHE_MANAGER) private cacheManager: Cache,
     ) {
         this.logger = new WinstonLoggerService();
@@ -316,7 +319,7 @@ export class UserService {
         };
     }
 
-    generateSalt = () => {
+    private generateSalt = () => {
         return crypto.randomBytes(16).toString('hex');
     };
 }
