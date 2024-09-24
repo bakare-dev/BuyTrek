@@ -40,8 +40,6 @@ Welcome to **BuyTrek**, a powerful and scalable E-commerce API built with NestJS
     cd buytrek
     ```
 
-````
-
 2. Install the dependencies:
 
     ```bash
@@ -79,4 +77,3 @@ Welcome to **BuyTrek**, a powerful and scalable E-commerce API built with NestJS
 ## Usage
 
 Once the server is running, you can access the API at `http://localhost:9001`.
-````
