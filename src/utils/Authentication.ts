@@ -28,7 +28,7 @@ export class AuthenticationUtils {
     const refreshTokenExpiresIn = new Date(
       now.getTime() + 7 * 24 * 3600 * 1000,
     );
-    const refreshToken = jwt.sign({ userId }, this.JWT_SECRET, {
+    const refreshToken = jwt.sign({ userId, type }, this.JWT_SECRET, {
       expiresIn: this.REFRESH_TOKEN_EXPIRES_IN,
     });
 
@@ -61,10 +61,12 @@ export class AuthenticationUtils {
       const cachedToken = await this.cacheManager.get(
         `access-token-${decoded.userId}`,
       );
-      if (!cachedToken || cachedToken !== token) {
+      if (!cachedToken || cachedToken != token) {
         throw new UnauthorizedException('Token expired or invalid');
       }
-      return decoded;
+      return {
+        data: decoded,
+      };
     } catch (error) {
       this.logger.error(error);
       throw new UnauthorizedException('Invalid or expired token');
@@ -77,7 +79,7 @@ export class AuthenticationUtils {
       const cachedRefreshToken = await this.cacheManager.get(
         `refresh-token-${decoded.userId}`,
       );
-      if (!cachedRefreshToken || cachedRefreshToken !== refreshToken) {
+      if (!cachedRefreshToken || cachedRefreshToken != refreshToken) {
         throw new UnauthorizedException('Refresh token expired or invalid');
       }
 
@@ -106,7 +108,7 @@ export class AuthenticationUtils {
     return otp;
   }
 
-  async validateOtp(otp: string, userId: string): Promise<boolean> {
+  async validateOtp(otp: number, userId: string): Promise<boolean> {
     const cachedOtp = await this.cacheManager.get(`otp-${userId}`);
 
     if (cachedOtp && cachedOtp == otp) {

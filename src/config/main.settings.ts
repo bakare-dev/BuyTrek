@@ -58,7 +58,17 @@ export default {
   },
   security: {
     jwtSecret: process.env.JWT_SECRET,
-    unprotectedRoutes: [],
+    unprotectedRoutes: [
+      '/',
+      '/health',
+      '/swagger',
+      '/api/v1/user',
+      '/api/v1/user/activate',
+      '/api/v1/user/resend-otp',
+      '/api/v1/user/sign-in',
+      '/api/v1/user/initiate-password-reset',
+      '/api/v1/user/complete-password-reset',
+    ],
     saltLength: 10,
   },
 };

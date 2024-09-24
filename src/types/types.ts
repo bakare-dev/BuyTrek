@@ -22,3 +22,13 @@ export class ActivateAccountPayload {
 export class ResendOtpPayload {
   userId: string;
 }
+
+export class InitiatePasswordResetPayload {
+  emailAddress: string;
+}
+
+export class CompletePasswordResetPayload {
+  userId: string;
+  password: string;
+  otp: number;
+}

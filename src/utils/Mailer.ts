@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import * as ejs from 'ejs';
 import { WinstonLoggerService } from './Logger';
-import mainSettings from 'src/config/main.settings';
+import mainSettings from '../config/main.settings';
 
 @Injectable()
 export class MailerService {
@@ -29,7 +29,7 @@ export class MailerService {
     data: any;
   }): Promise<{ status: string; message: any }> {
     try {
-      const templatePath = `${process.cwd()}/templates/${info.templateFile}`;
+      const templatePath = `${process.cwd()}/src/templates/${info.templateFile}`;
 
       const emailContent = await ejs.renderFile(templatePath, info.data);
 

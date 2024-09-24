@@ -2,7 +2,7 @@ import { Injectable, LoggerService } from '@nestjs/common';
 import * as winston from 'winston';
 import { Logtail } from '@logtail/node';
 import { LogtailTransport } from '@logtail/winston';
-import mainSettings from 'src/config/main.settings';
+import mainSettings from '../config/main.settings';
 
 @Injectable()
 export class WinstonLoggerService implements LoggerService {

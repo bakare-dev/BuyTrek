@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -6,10 +6,10 @@ import { UsersModule } from './users/users.module';
 import { CoreModule } from './core/core.module';
 import { DatabaseEngine } from './utils/DatabaseEngine';
 import { ConfigModule } from '@nestjs/config';
-import { MailModule } from './mail/mail.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { CacheModule } from '@nestjs/cache-manager';
 import { RedisOptions } from './config/redis.constants';
+import { AuthMiddleware } from './middleware/auth.middleware';
 
 @Module({
   imports: [
@@ -26,9 +26,12 @@ import { RedisOptions } from './config/redis.constants';
     ]),
     UsersModule,
     CoreModule,
-    MailModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(AuthMiddleware).forRoutes('*');
+  }
+}
