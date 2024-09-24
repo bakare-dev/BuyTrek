@@ -6,7 +6,7 @@ export class AppService {
     return {
       api: '/api/v1',
       health: '/health',
-      doc: 'swagger',
+      doc: '/swagger',
     };
   }
 

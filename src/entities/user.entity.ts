@@ -12,13 +12,19 @@ export class User {
   id: string;
 
   @Column({ unique: true })
-  username: string;
+  emailAddress: string;
 
   @Column()
   password: string;
 
-  @Column({ nullable: true })
-  authStrategy: string;
+  @Column()
+  salt: string;
+
+  @Column({ default: false })
+  activated: boolean;
+
+  @Column()
+  type: number; // 0-user, 1-admin
 
   @CreateDateColumn({ type: 'timestamp' })
   createdAt: Date;
