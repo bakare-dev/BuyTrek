@@ -10,28 +10,30 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { CacheModule } from '@nestjs/cache-manager';
 import { RedisOptions } from './config/redis.constants';
 import { AuthMiddleware } from './middleware/auth.middleware';
+import { PictureModule } from './picture/picture.module';
 
 @Module({
-  imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
-    CacheModule.registerAsync(RedisOptions),
-    TypeOrmModule.forRoot(DatabaseEngine),
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000,
-        limit: 10,
-      },
-    ]),
-    UsersModule,
-    CoreModule,
-  ],
-  controllers: [AppController],
-  providers: [AppService],
+    imports: [
+        ConfigModule.forRoot({
+            isGlobal: true,
+        }),
+        CacheModule.registerAsync(RedisOptions),
+        TypeOrmModule.forRoot(DatabaseEngine),
+        ThrottlerModule.forRoot([
+            {
+                ttl: 60000,
+                limit: 10,
+            },
+        ]),
+        UsersModule,
+        CoreModule,
+        PictureModule,
+    ],
+    controllers: [AppController],
+    providers: [AppService],
 })
 export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(AuthMiddleware).forRoutes('*');
-  }
+    configure(consumer: MiddlewareConsumer) {
+        consumer.apply(AuthMiddleware).forRoutes('*');
+    }
 }

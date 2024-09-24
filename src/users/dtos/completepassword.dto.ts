@@ -1,22 +1,22 @@
 import {
-  IsNotEmpty,
-  IsNumber,
-  IsUUID,
-  Max,
-  Min,
-  MinLength,
+    IsNotEmpty,
+    IsNumber,
+    IsUUID,
+    Max,
+    Min,
+    MinLength,
 } from 'class-validator';
 
 export class CompletePasswordReset {
-  @IsUUID()
-  userId: string;
+    @IsUUID()
+    userId: string;
 
-  @IsNotEmpty()
-  @MinLength(8)
-  password: string;
+    @IsNotEmpty()
+    @MinLength(8)
+    password: string;
 
-  @IsNumber()
-  @Min(100000)
-  @Max(999999)
-  otp: number;
+    @IsNumber()
+    @Min(100000)
+    @Max(999999)
+    otp: number;
 }

@@ -1,35 +1,37 @@
 import {
-  Column,
-  Entity,
-  PrimaryGeneratedColumn,
-  CreateDateColumn,
-  UpdateDateColumn,
-  OneToOne,
-  OneToMany,
+    Column,
+    Entity,
+    PrimaryGeneratedColumn,
+    CreateDateColumn,
+    UpdateDateColumn,
+    OneToOne,
+    JoinColumn,
 } from 'typeorm';
 import { User } from './user.entity';
 import { Picture } from './picture.entity';
 
 @Entity({ name: 'userprofiles' })
 export class UserProfile {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+    @PrimaryGeneratedColumn('uuid')
+    id: string;
 
-  @Column()
-  firstName: string;
+    @Column()
+    firstName: string;
 
-  @Column()
-  lastName: string;
+    @Column()
+    lastName: string;
 
-  @CreateDateColumn({ type: 'timestamp' })
-  createdAt: Date;
+    @CreateDateColumn({ type: 'timestamp' })
+    createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamp' })
-  updatedAt: Date;
+    @UpdateDateColumn({ type: 'timestamp' })
+    updatedAt: Date;
 
-  @OneToOne(() => User, (user) => user.id)
-  user: User;
+    @OneToOne(() => User, (user) => user.id)
+    @JoinColumn()
+    user: User;
 
-  @OneToMany(() => Picture, (picture) => picture.id)
-  picture: Picture;
+    @OneToOne(() => Picture, (picture) => picture.id)
+    @JoinColumn()
+    picture: Picture;
 }
