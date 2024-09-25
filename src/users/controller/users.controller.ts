@@ -1,9 +1,15 @@
 import {
     Body,
     Controller,
+    Delete,
+    Get,
     Headers,
+    Param,
     Post,
+    Put,
+    Query,
     UnauthorizedException,
+    UnprocessableEntityException,
 } from '@nestjs/common';
 import { CreateUserDto } from '../dtos/createUser.dto';
 import { VerifyOtpDto } from '../dtos/verifyotp.dto';
@@ -12,6 +18,10 @@ import { ResendOtp } from '../../users/dtos/resendOtp.dto';
 import { LoginDto } from '../../users/dtos/login.dto';
 import { InitiatePasswordReset } from '../../users/dtos/initiatepasswor.dto';
 import { CompletePasswordReset } from '../../users/dtos/completepassword.dto';
+import { CreateProfileDto } from '../dtos/createprofile.dto';
+import { UpdateDefaultAddressDto } from '../dtos/updatedefaultaddress.dto';
+import { UpdateAddressDto } from '../dtos/updateAddress.dto';
+import { CreateAddressDto } from '../dtos/createaddress.dto';
 
 @Controller('api/v1/user')
 export class UsersController {
@@ -64,5 +74,87 @@ export class UsersController {
         }
 
         return this.userService.generateNewAccessToken(refreshToken);
+    }
+
+    @Post('/sign-out')
+    logout(@Headers('authorization') authHeader: string) {
+        return this.userService.Logout(authHeader);
+    }
+
+    @Get('/profile')
+    getProfile(@Headers('authorization') authHeader: string) {
+        return this.userService.getProfile(authHeader);
+    }
+
+    @Post('/profile')
+    createProfile(
+        @Headers('authorization') authHeader: string,
+        @Body() payload: CreateProfileDto,
+    ) {
+        return this.userService.createProfile(payload, authHeader);
+    }
+
+    @Put('/profile')
+    updateProfile(
+        @Headers('authorization') authHeader: string,
+        @Body() payload: any,
+    ) {
+        return this.userService.updateProfile(payload, authHeader);
+    }
+
+    @Get('/addresses')
+    getAddresses(
+        @Headers('authorization') authHeader: string,
+        @Query() query: { page: number; size: number },
+    ) {
+        return this.userService.getUserAddresses(query, authHeader);
+    }
+
+    @Get('/address')
+    getAddress(
+        @Headers('authorization') authHeader: string,
+        @Query('id') id: string,
+    ) {
+        return this.userService.getAddress({ addressId: id }, authHeader);
+    }
+
+    @Delete('/address')
+    deleteAddress(
+        @Headers('authorization') authHeader: string,
+        @Query('id') id: string,
+    ) {
+        return this.userService.deleteAddress({ addressId: id }, authHeader);
+    }
+
+    @Post('/address')
+    createAddress(
+        @Headers('authorization') authHeader: string,
+        @Body() payload: CreateAddressDto,
+    ) {
+        return this.userService.createAddress(payload, authHeader);
+    }
+
+    @Put('/default/address')
+    updateDefaultAddress(
+        @Headers('authorization') authHeader: string,
+        @Query('id') id: string,
+    ) {
+        console.log(id);
+        return this.userService.updateDefaultAddress(
+            { addressId: id },
+            authHeader,
+        );
+    }
+
+    @Put('/address')
+    updateAddress(
+        @Headers('authorization') authHeader: string,
+        @Query('id') id: string,
+        @Body() payload: UpdateAddressDto,
+    ) {
+        return this.userService.editAddress(
+            { addressId: id, address: payload.address },
+            authHeader,
+        );
     }
 }

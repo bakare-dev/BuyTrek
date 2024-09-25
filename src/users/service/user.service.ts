@@ -4,6 +4,7 @@ import {
     Inject,
     NotFoundException,
     UnauthorizedException,
+    BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../../entities/user.entity';
@@ -15,6 +16,11 @@ import {
     ResendOtpPayload,
     InitiatePasswordResetPayload,
     CompletePasswordResetPayload,
+    CreateProfilePayload,
+    CreateAddress,
+    UpdateDefaultAddress,
+    UpdateAddress,
+    DeleteAddress,
 } from '../../types/types';
 import { WinstonLoggerService } from '../../utils/Logger';
 import * as crypto from 'crypto';
@@ -23,13 +29,16 @@ import { Cache } from 'cache-manager';
 import { AuthenticationUtils } from '../../utils/Authentication';
 import { NotificationService } from '../../utils/NotificationService';
 import { UserProfile } from '../../entities/userprofile.entity';
-import { Address } from 'src/entities/address.entity';
+import { Address } from '../../entities/address.entity';
+import { Picture } from '../../entities/picture.entity';
+import { HelperUtil } from 'src/utils/Helper';
 
 @Injectable()
 export class UserService {
     private logger;
     private authenticator;
     private noticationService = new NotificationService();
+    private helperUtil;
 
     constructor(
         @InjectRepository(User) private userRepository: Repository<User>,
@@ -40,10 +49,16 @@ export class UserService {
         @InjectRepository(Address)
         private addressRepository: Repository<Address>,
 
+        @InjectRepository(Picture)
+        private pictureRepository: Repository<Picture>,
+
         @Inject(CACHE_MANAGER) private cacheManager: Cache,
     ) {
         this.logger = new WinstonLoggerService();
+
         this.authenticator = new AuthenticationUtils(cacheManager);
+
+        this.helperUtil = new HelperUtil();
     }
 
     async confirmEmailAndPassword(payload: SignInPayload) {
@@ -316,6 +331,332 @@ export class UserService {
 
         return {
             data: newTokens,
+        };
+    }
+
+    async Logout(authHeader: string) {
+        const decoded = await this.authenticator.validateToken(authHeader);
+
+        await this.authenticator.logout(decoded.userId);
+
+        return {
+            message: 'Logout successful',
+        };
+    }
+
+    async createProfile(payload: CreateProfilePayload, authHeader: string) {
+        const isTokenValid = await this.authenticator.validateToken(authHeader);
+
+        const user = await this.userRepository.findOne({
+            where: {
+                id: isTokenValid.userId,
+            },
+        });
+
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        const picture = await this.pictureRepository.findOne({
+            where: {
+                id: payload.pictureId,
+            },
+        });
+
+        if (!picture) {
+            throw new NotFoundException('Picture not found');
+        }
+
+        const userProfile = await this.userprofileRepository.create({
+            ...payload,
+            user,
+            picture,
+        });
+
+        await this.userprofileRepository.save(userProfile);
+
+        return {
+            statusCode: 201,
+            message: 'Profile created successfully',
+        };
+    }
+
+    async getProfile(authHeader: string) {
+        const isTokenValid = await this.authenticator.validateToken(authHeader);
+
+        const user = await this.userRepository.findOne({
+            where: {
+                id: isTokenValid.userId,
+            },
+        });
+
+        if (!user) {
+            throw new UnauthorizedException('Unauthorized');
+        }
+
+        const profile = await this.userprofileRepository.findOne({
+            where: {
+                user: {
+                    id: user.id,
+                },
+            },
+            relations: ['picture'],
+        });
+
+        if (!profile) {
+            throw new NotFoundException('Profile not found');
+        }
+
+        const profileData = {
+            firstName: profile.firstName,
+            lastName: profile.lastName,
+            userId: isTokenValid.userId,
+            pictureUrl: profile.picture.url,
+        };
+
+        return {
+            data: profileData,
+        };
+    }
+
+    async updateProfile(payload: any, authHeader: string) {
+        const isTokenValid = await this.authenticator.validateToken(authHeader);
+
+        const user = await this.userRepository.findOne({
+            where: {
+                id: isTokenValid.userId,
+            },
+        });
+
+        if (!user) {
+            throw new UnauthorizedException('Unauthorized');
+        }
+
+        let body: { firstName?: string; lastName?: string } = {};
+
+        if (payload.firstName) body.firstName = payload.firstName;
+
+        if (payload.lastName) body.lastName = payload.lastName;
+
+        await this.userprofileRepository.update(
+            {
+                user: {
+                    id: user.id,
+                },
+            },
+            body,
+        );
+
+        return {
+            message: 'Profile updated successfully',
+        };
+    }
+
+    async createAddress(payload: CreateAddress, authHeader: string) {
+        const isTokenValid = await this.authenticator.validateToken(authHeader);
+
+        const user = await this.userRepository.findOne({
+            where: {
+                id: isTokenValid.userId,
+            },
+        });
+
+        if (!user) {
+            throw new UnauthorizedException('Unauthorized');
+        }
+
+        const addressPayload = this.addressRepository.create({
+            ...payload,
+            user,
+        });
+
+        await this.addressRepository.save(addressPayload);
+
+        return {
+            statusCode: 201,
+            message: 'Address created sucessfully',
+        };
+    }
+
+    async updateDefaultAddress(
+        payload: UpdateDefaultAddress,
+        authHeader: string,
+    ) {
+        const isTokenValid = await this.authenticator.validateToken(authHeader);
+
+        const user = await this.userRepository.findOne({
+            where: {
+                id: isTokenValid.userId,
+            },
+        });
+
+        if (!user) {
+            throw new UnauthorizedException('Unauthorized');
+        }
+
+        const address = await this.addressRepository.findOne({
+            where: {
+                id: payload.addressId,
+            },
+        });
+
+        if (!address) {
+            throw new NotFoundException('Address not found');
+        }
+
+        const defaultAddress = await this.addressRepository.findOne({
+            where: {
+                user: {
+                    id: user.id,
+                },
+                isDefault: true,
+            },
+        });
+
+        if (defaultAddress) {
+            await this.addressRepository.update(defaultAddress.id, {
+                isDefault: false,
+            });
+        }
+
+        await this.addressRepository.update(address.id, {
+            isDefault: true,
+        });
+
+        return {
+            message: 'Address updated to default',
+        };
+    }
+
+    async getUserAddresses(query, authHeader: string) {
+        const isTokenValid = await this.authenticator.validateToken(authHeader);
+
+        const { page, size } = query;
+
+        const user = await this.userRepository.findOne({
+            where: {
+                id: isTokenValid.userId,
+            },
+        });
+
+        if (!user) {
+            throw new UnauthorizedException('Unauthorized');
+        }
+
+        const { skip, take } = this.helperUtil.paginate(
+            parseInt(page),
+            parseInt(size),
+        );
+
+        const [addresses, total] = await this.addressRepository.findAndCount({
+            where: {
+                user: {
+                    id: user.id,
+                },
+            },
+            skip,
+            take,
+        });
+
+        return {
+            data: {
+                addresses,
+                currentPage: parseInt(page) ?? 0,
+                totalPages: Math.ceil(total / take),
+                totalAddresses: total,
+            },
+        };
+    }
+
+    async getAddress(query: DeleteAddress, authHeader: string) {
+        const isTokenValid = await this.authenticator.validateToken(authHeader);
+
+        const user = await this.userRepository.findOne({
+            where: {
+                id: isTokenValid.userId,
+            },
+        });
+
+        if (!user) {
+            throw new UnauthorizedException('Unauthorized');
+        }
+
+        const address = await this.addressRepository.findOne({
+            where: {
+                id: query.addressId,
+            },
+        });
+
+        if (!address) {
+            throw new NotFoundException('Address not found');
+        }
+
+        return {
+            data: {
+                address,
+            },
+        };
+    }
+
+    async editAddress(payload: UpdateAddress, authHeader: string) {
+        const isTokenValid = await this.authenticator.validateToken(authHeader);
+
+        const user = await this.userRepository.findOne({
+            where: {
+                id: isTokenValid.userId,
+            },
+        });
+
+        if (!user) {
+            throw new UnauthorizedException('Unauthorized');
+        }
+
+        const address = await this.addressRepository.findOne({
+            where: {
+                id: payload.addressId,
+            },
+        });
+
+        if (!address) {
+            throw new NotFoundException('Address not found');
+        }
+
+        address.address = payload.address;
+
+        this.addressRepository.save(address);
+
+        return {
+            message: 'Address updated successfully',
+        };
+    }
+
+    async deleteAddress(query: DeleteAddress, authHeader: string) {
+        const isTokenValid = await this.authenticator.validateToken(authHeader);
+
+        const user = await this.userRepository.findOne({
+            where: {
+                id: isTokenValid.userId,
+            },
+        });
+
+        if (!user) {
+            throw new UnauthorizedException('Unauthorized');
+        }
+
+        const address = await this.addressRepository.findOne({
+            where: {
+                id: query.addressId,
+            },
+        });
+
+        if (!address) {
+            throw new NotFoundException('Address not found');
+        }
+
+        await this.addressRepository.delete(address.id);
+
+        return {
+            message: 'Address deleted',
         };
     }
 

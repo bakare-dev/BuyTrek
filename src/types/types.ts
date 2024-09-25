@@ -32,3 +32,26 @@ export class CompletePasswordResetPayload {
     password: string;
     otp: number;
 }
+
+export class CreateProfilePayload {
+    firstName: string;
+    lastName: string;
+    pictureId: string;
+}
+
+export class CreateAddress {
+    address: string;
+}
+
+export class UpdateAddress {
+    address: string;
+    addressId: string;
+}
+
+export class UpdateDefaultAddress {
+    addressId: string;
+}
+
+export class DeleteAddress {
+    addressId: string;
+}

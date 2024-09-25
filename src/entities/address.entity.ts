@@ -16,6 +16,9 @@ export class Address {
     @Column()
     address: string;
 
+    @Column({ default: false })
+    isDefault: boolean;
+
     @CreateDateColumn({ type: 'timestamp' })
     createdAt: Date;
 

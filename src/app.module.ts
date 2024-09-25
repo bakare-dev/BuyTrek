@@ -9,7 +9,6 @@ import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { CacheModule } from '@nestjs/cache-manager';
 import { RedisOptions } from './config/redis.constants';
-import { AuthMiddleware } from './middleware/auth.middleware';
 import { PictureModule } from './picture/picture.module';
 
 @Module({
@@ -32,8 +31,4 @@ import { PictureModule } from './picture/picture.module';
     controllers: [AppController],
     providers: [AppService],
 })
-export class AppModule implements NestModule {
-    configure(consumer: MiddlewareConsumer) {
-        consumer.apply(AuthMiddleware).forRoutes('*');
-    }
-}
+export class AppModule {}

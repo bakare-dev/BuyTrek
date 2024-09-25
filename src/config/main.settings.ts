@@ -55,12 +55,17 @@ export default {
             user: process.env.SMTP_USN,
             password: process.env.SMTP_PASSWORD,
         },
+        cloudinary: {
+            apiKey: process.env.CLOUDINARY_API_KEY,
+            apiSecret: process.env.CLOUDINARY_API_SECRET,
+            cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+        },
     },
     security: {
         jwtSecret: process.env.JWT_SECRET,
         unprotectedRoutes: [
-            '/',
             '/health',
+            '/media-upload',
             '/swagger',
             '/api/v1/user',
             '/api/v1/user/activate',
@@ -68,6 +73,7 @@ export default {
             '/api/v1/user/sign-in',
             '/api/v1/user/initiate-password-reset',
             '/api/v1/user/complete-password-reset',
+            // '/',
         ],
         saltLength: 10,
     },

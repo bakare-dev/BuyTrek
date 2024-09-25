@@ -56,7 +56,7 @@ export class AuthenticationUtils {
 
     async validateToken(authHeader: string) {
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            throw new UnauthorizedException('Invalid token format');
+            throw new UnauthorizedException('Unauthorized');
         }
 
         const token = authHeader.split(' ')[1];
@@ -66,14 +66,11 @@ export class AuthenticationUtils {
                 `access-token-${decoded.userId}`,
             );
             if (!cachedToken || cachedToken != token) {
-                throw new UnauthorizedException('Token expired or invalid');
+                throw new UnauthorizedException('Unauthorized');
             }
-            return {
-                data: decoded,
-            };
+            return decoded;
         } catch (error) {
-            this.logger.error(error);
-            throw new UnauthorizedException('Invalid or expired token');
+            throw new UnauthorizedException('Unauthorized');
         }
     }
 
@@ -84,9 +81,7 @@ export class AuthenticationUtils {
                 `refresh-token-${decoded.userId}`,
             );
             if (!cachedRefreshToken || cachedRefreshToken != refreshToken) {
-                throw new UnauthorizedException(
-                    'Refresh token expired or invalid',
-                );
+                throw new UnauthorizedException('Unauthorized');
             }
 
             const newTokens = await this.generateToken(
@@ -96,7 +91,7 @@ export class AuthenticationUtils {
             return newTokens;
         } catch (error) {
             this.logger.error(error);
-            throw new UnauthorizedException('Invalid or expired refresh token');
+            throw new UnauthorizedException('Unauthorized');
         }
     }
 
