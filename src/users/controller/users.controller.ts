@@ -4,12 +4,10 @@ import {
     Delete,
     Get,
     Headers,
-    Param,
     Post,
     Put,
     Query,
     UnauthorizedException,
-    UnprocessableEntityException,
 } from '@nestjs/common';
 import { CreateUserDto } from '../dtos/createUser.dto';
 import { VerifyOtpDto } from '../dtos/verifyotp.dto';
@@ -19,7 +17,6 @@ import { LoginDto } from '../../users/dtos/login.dto';
 import { InitiatePasswordReset } from '../../users/dtos/initiatepasswor.dto';
 import { CompletePasswordReset } from '../../users/dtos/completepassword.dto';
 import { CreateProfileDto } from '../dtos/createprofile.dto';
-import { UpdateDefaultAddressDto } from '../dtos/updatedefaultaddress.dto';
 import { UpdateAddressDto } from '../dtos/updateAddress.dto';
 import { CreateAddressDto } from '../dtos/createaddress.dto';
 
