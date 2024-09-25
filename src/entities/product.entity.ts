@@ -22,6 +22,9 @@ export class Product {
     @Column()
     description: string;
 
+    @Column({ default: true })
+    isAvailable: boolean;
+
     @CreateDateColumn({ type: 'timestamp' })
     createdAt: Date;
 

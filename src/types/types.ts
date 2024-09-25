@@ -55,3 +55,15 @@ export class UpdateDefaultAddress {
 export class DeleteAddress {
     addressId: string;
 }
+
+export class GetOrders {
+    page: number;
+    size: number;
+}
+
+export class CreateProduct {
+    product: string;
+    amount: number;
+    description: string;
+    pictures: any;
+}

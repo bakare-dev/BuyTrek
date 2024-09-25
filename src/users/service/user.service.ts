@@ -126,9 +126,15 @@ export class UserService {
 
         const token = await this.authenticator.generateToken(user.id, 1);
 
+        let type = 'User';
+
+        if (user.type == 1) {
+            type = 'Admin';
+        }
+
         return {
             message: 'Login Successful',
-            data: { token, profile: profileExist },
+            data: { token, profile: profileExist, type },
         };
     }
 
