@@ -1,5 +1,3 @@
-Here's an updated version of the README for **BuyTrek** with the additional details and instructions:
-
 ---
 
 # BuyTrek - E-commerce API
