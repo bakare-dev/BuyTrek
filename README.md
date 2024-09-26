@@ -107,7 +107,7 @@ For frontend integration, navigate to `/src/config/main.settings.ts` and update 
 
 Make sure to implement the following payment routes in your frontend:
 
--   `/order/cancel`: Paystack redirects here when the user cancels the payment. You should call the backend's "cancel order payment('/api/v1/order/cancel?id=19b21195-f9cf-4216-9c0e-774e13531580&type=payment')" endpoint and then redirect the user back to the cart page.
+-   `/order/cancel`: Paystack redirects here when the user cancels the payment. You should call the backend's "cancel order payment('/api/v1/order/cancel?id=<orderId>&type=payment')" endpoint and then redirect the user back to the cart page. Note leave type=payment like that only add the order id
 -   `/orders`: Paystack redirects here after payment completion.
 
 ### User Roles

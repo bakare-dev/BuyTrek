@@ -128,7 +128,7 @@ export class OrderService {
 
         description = description.trim().replace(/,$/, '');
 
-        const ref = `BuyTrek-${Math.random().toString(36).substr(2, 9)}/${Date.now()}`;
+        const ref = `BuyTrek-${Math.random().toString(36).substr(2, 9)}`;
         const orderData = this.orderRepository.create({
             orderNo: ref,
             user,
@@ -334,20 +334,37 @@ export class OrderService {
                 relations: ['user'],
             });
 
-            const admins = await this.userRepository.find({
+            const admins = await this.userprofileRepository.find({
                 where: {
-                    type: 1,
+                    user: {
+                        type: In([1, 3]),
+                    },
                 },
+                relations: ['user'],
             });
 
-            const adminemails = admins.map((admin) => admin.emailAddress);
+            const admindetails = admins.map((admin) => ({
+                email: admin.user.emailAddress,
+                name: admin.firstName,
+            }));
 
-            const adminNotification = {
-                recipients: adminemails,
+            let adminNotification = {
+                recipients: [],
                 data: {
                     orderNo: orderTransaction.order.orderNo,
+                    name: '',
                 },
             };
+
+            admindetails.map((admin) => {
+                adminNotification.recipients.push(admin.email);
+                adminNotification.data.name = admin.name;
+
+                this.noticationService.SendOrderNewAdminOrder(
+                    adminNotification,
+                    () => {},
+                );
+            });
 
             const userNotification = {
                 recipients: [`${userprofile.user.emailAddress}`],
@@ -357,11 +374,6 @@ export class OrderService {
                     amount: orderTransaction.order.totalAmount,
                 },
             };
-
-            this.noticationService.SendOrderNewAdminOrder(
-                userNotification,
-                () => {},
-            );
 
             this.noticationService.SendOrderPaymentCompleted(
                 userNotification,

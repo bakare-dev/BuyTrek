@@ -89,7 +89,7 @@ export class NotificationService {
             const info = {
                 sender: 'noreply@bakaredev.me',
                 templateFile: 'packaging.ejs',
-                subject: 'Password Reset Successful!',
+                subject: 'Order Packaging in Progress',
                 recipients: [recipient],
                 data: message.data,
             };
@@ -107,7 +107,7 @@ export class NotificationService {
             const info = {
                 sender: 'noreply@bakaredev.me',
                 templateFile: 'packaged.ejs',
-                subject: 'Password Reset Successful!',
+                subject: 'Your Order Has Been Packaged!',
                 recipients: [recipient],
                 data: message.data,
             };
@@ -125,7 +125,7 @@ export class NotificationService {
             const info = {
                 sender: 'noreply@bakaredev.me',
                 templateFile: 'out-for-delivery.ejs',
-                subject: 'Password Reset Successful!',
+                subject: 'Your Order is Out for Delivery!',
                 recipients: [recipient],
                 data: message.data,
             };
@@ -143,7 +143,7 @@ export class NotificationService {
             const info = {
                 sender: 'noreply@bakaredev.me',
                 templateFile: 'delivered.ejs',
-                subject: 'Password Reset Successful!',
+                subject: 'Your Order Has Been Delivered!',
                 recipients: [recipient],
                 data: message.data,
             };
@@ -161,7 +161,7 @@ export class NotificationService {
             const info = {
                 sender: 'noreply@bakaredev.me',
                 templateFile: 'new-order.ejs',
-                subject: 'Password Reset Successful!',
+                subject: 'Payment Initiated for Your Order',
                 recipients: [recipient],
                 data: message.data,
             };
@@ -179,7 +179,7 @@ export class NotificationService {
             const info = {
                 sender: 'noreply@bakaredev.me',
                 templateFile: 'payment-completed.ejs',
-                subject: 'Password Reset Successful!',
+                subject: 'Payment Successfully Completed',
                 recipients: [recipient],
                 data: message.data,
             };
@@ -197,7 +197,7 @@ export class NotificationService {
             const info = {
                 sender: 'noreply@bakaredev.me',
                 templateFile: 'admin-new-order.ejs',
-                subject: 'Password Reset Successful!',
+                subject: 'New Order Available for Processing!',
                 recipients: [recipient],
                 data: message.data,
             };
@@ -215,7 +215,7 @@ export class NotificationService {
             const info = {
                 sender: 'noreply@bakaredev.me',
                 templateFile: 'cancelled.ejs',
-                subject: 'Password Reset Successful!',
+                subject: 'Your Order Has Been Canceled!',
                 recipients: [recipient],
                 data: message.data,
             };

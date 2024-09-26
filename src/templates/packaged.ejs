@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Packaged</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+        }
+
+        .content {
+            padding: 20px;
+            text-align: left;
+        }
+
+        .order-number {
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #888;
+            border-top: 1px solid #f4f4f4;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Your Order Has Been Packaged!</h1>
+        </div>
+        <div class="content">
+            <p>Hello <strong>
+                    <%= name %>
+                </strong>,</p>
+            <p>We are pleased to inform you that your order <span class="order-number">(<%= orderNo %>)</span> has been
+                successfully packaged.</p>
+            <p>Your order is now ready for shipping, and we will update you once it has been dispatched.</p>
+            <p>Thank you for shopping with BuyTrek! We appreciate your trust in us.</p>
+        </div>
+        <div class="footer">
+            <p>&copy; 2024 BuyTrek. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+
+</html>
