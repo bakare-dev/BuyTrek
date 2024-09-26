@@ -12,14 +12,21 @@ import { Order } from '../entities/order.entity';
 import { OrderAddress } from '../entities/orderaddress.entity';
 import { OrderTransaction } from '../entities/ordertransaction.entities';
 import { OrderProduct } from '../entities/orderproduct.entity';
+import { Category } from '../entities/category.entity';
+import mainSettings from '../config/main.settings';
+
+const dbConfig =
+    mainSettings.infrastructure.environment == 'production'
+        ? config.database.production
+        : config.database.development;
 
 export const DatabaseEngine: TypeOrmModuleOptions = {
     type: 'mysql',
-    host: config.database.development.host,
+    host: dbConfig.host,
     port: 3306,
-    username: config.database.development.username,
-    password: config.database.development.password,
-    database: config.database.development.database,
+    username: dbConfig.username,
+    password: dbConfig.password,
+    database: dbConfig.database,
     entities: [
         User,
         UserProfile,
@@ -33,7 +40,8 @@ export const DatabaseEngine: TypeOrmModuleOptions = {
         OrderAddress,
         OrderTransaction,
         OrderProduct,
+        Category,
     ],
     synchronize: true,
-    logging: config.database.development.logging,
+    logging: dbConfig.logging,
 };

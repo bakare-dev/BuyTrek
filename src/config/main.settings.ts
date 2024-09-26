@@ -33,16 +33,21 @@ export default {
         },
     },
     infrastructure: {
+        environment: process.env.NODE_ENV,
         dateFormat: 'YYYY-MM-DD HH:mm:ss',
         timezone: 'Africa/Lagos',
         baseUrl: {
-            production: process.env.PROD_BASE_URL,
-            development: 'localhost',
-            test: process.env.TEST_BASE_URL,
+            production: '',
+            development: 'http://localhost:3000',
         },
         winston: {
             server: process.env.WINSTONSOURCESERVER,
             sourceToken: process.env.WINSTONSOURCETOKEN,
+        },
+        paystack: {
+            publicKey: process.env.PAYSTACKPUBLICKEY,
+            secretKey: process.env.PAYSTACKSECRETKEY,
+            allowedIps: ['52.31.139.75', '52.49.173.169', '52.214.14.220'],
         },
         redis: {
             url: process.env.REDISURL,

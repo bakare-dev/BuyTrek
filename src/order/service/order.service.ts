@@ -1,6 +1,7 @@
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import {
     BadRequestException,
+    ForbiddenException,
     Inject,
     Injectable,
     NotFoundException,
@@ -14,25 +15,27 @@ import { Order } from '../../entities/order.entity';
 import { OrderAddress } from '../../entities/orderaddress.entity';
 import { OrderProduct } from '../../entities/orderproduct.entity';
 import { OrderTransaction } from '../../entities/ordertransaction.entities';
-import { Picture } from '../../entities/picture.entity';
-import { Product } from '../../entities/product.entity';
 import { ProductPicture } from '../../entities/productpicture.entity';
 import { Transaction } from '../../entities/transaction.entity';
 import { User } from '../../entities/user.entity';
 import { UserProfile } from '../../entities/userprofile.entity';
 import { AuthenticationUtils } from '../../utils/Authentication';
 import { HelperUtil } from '../../utils/Helper';
-import { WinstonLoggerService } from '../../utils/Logger';
 import { NotificationService } from '../../utils/NotificationService';
 import { In, Not, Repository } from 'typeorm';
-import { CreateProduct, GetOrders } from 'src/types/types';
+import { GetOrders, GetTransaction } from '../../types/types';
+import mainSettings from 'src/config/main.settings';
+import { HttpService } from '@nestjs/axios';
+import { lastValueFrom } from 'rxjs';
+import * as crypto from 'crypto';
 
 @Injectable()
-export class CoreService {
-    private logger;
+export class OrderService {
     private authenticator;
     private noticationService = new NotificationService();
     private helperUtil;
+    private url;
+    private paystackHeader;
 
     constructor(
         @InjectRepository(User) private userRepository: Repository<User>,
@@ -42,9 +45,6 @@ export class CoreService {
 
         @InjectRepository(Address)
         private addressRepository: Repository<Address>,
-
-        @InjectRepository(Picture)
-        private pictureRepository: Repository<Picture>,
 
         @InjectRepository(Cart)
         private cartRepository: Repository<Cart>,
@@ -61,9 +61,6 @@ export class CoreService {
         @InjectRepository(OrderTransaction)
         private orderTransactionRepository: Repository<OrderTransaction>,
 
-        @InjectRepository(Product)
-        private productRepository: Repository<Product>,
-
         @InjectRepository(ProductPicture)
         private productPictureRepository: Repository<ProductPicture>,
 
@@ -71,352 +68,313 @@ export class CoreService {
         private transactionRepository: Repository<Transaction>,
 
         @Inject(CACHE_MANAGER) private cacheManager: Cache,
-    ) {
-        this.logger = new WinstonLoggerService();
 
+        private readonly httpService: HttpService,
+    ) {
         this.authenticator = new AuthenticationUtils(cacheManager);
 
         this.helperUtil = new HelperUtil();
+
+        this.paystackHeader = {
+            headers: {
+                Authorization: `Bearer ${mainSettings.infrastructure.paystack.secretKey}`,
+                'Content-Type': 'application/json',
+            },
+        };
+
+        if (mainSettings.infrastructure.environment == 'production') {
+            this.url = mainSettings.infrastructure.baseUrl.production;
+        } else {
+            this.url = mainSettings.infrastructure.baseUrl.development;
+        }
     }
 
-    async createProduct(payload: CreateProduct, authHeader: string) {
-        const { product, description, amount, pictures } = payload;
+    async initiateOrder(authHeader: string) {
+        const { type, userId } =
+            await this.authenticator.validateToken(authHeader);
 
-        const isTokenValid = await this.authenticator.validateToken(authHeader);
-
-        if (isTokenValid.type != 1) {
-            throw new UnauthorizedException('Unathorized');
+        if (type !== 0) {
+            throw new UnauthorizedException('Unauthorized');
         }
 
         const user = await this.userRepository.findOne({
-            where: {
-                id: isTokenValid.id,
-            },
+            where: { id: userId },
         });
 
         if (!user) {
-            throw new BadRequestException('Unauthorized');
+            throw new NotFoundException('User not found');
         }
 
-        const productdata = await this.productRepository.create({
-            product,
-            user,
-            description,
-            amount,
+        const cart = await this.cartRepository.find({
+            where: { user: { id: user.id }, product: { isAvailable: true } },
+            relations: ['product'],
         });
 
-        const savedProduct = await this.productRepository.save(productdata);
+        if (!cart.length) {
+            throw new NotFoundException('Cart is empty');
+        }
 
-        for (const pictureId of pictures) {
-            const picture = await this.pictureRepository.findOne({
+        const cartProducts = new Map();
+        let description = '';
+        let totalAmount = 0;
+
+        cart.forEach((item) => {
+            const { product, quantity } = item;
+            description += `${quantity} x ${product.product}, `;
+            totalAmount += quantity * product.amount;
+
+            cartProducts.set(product.id, { product, quantity });
+        });
+
+        description = description.trim().replace(/,$/, '');
+
+        const ref = `BuyTrek-${Math.random().toString(36).substr(2, 9)}/${Date.now()}`;
+        const orderData = this.orderRepository.create({
+            orderNo: ref,
+            user,
+            totalAmount,
+            description,
+        });
+        const order = await this.orderRepository.save(orderData);
+
+        const userDefaultAddress = await this.addressRepository.findOne({
+            where: { user: { id: user.id }, isDefault: true },
+        });
+
+        const orderAddressData = this.orderAddressRepository.create({
+            order,
+            address: userDefaultAddress,
+        });
+        const orderaddress =
+            await this.orderAddressRepository.save(orderAddressData);
+
+        const orderProductsData = Array.from(cartProducts.values()).map(
+            ({ product, quantity }) => ({
+                product,
+                order,
+                amount: product.amount,
+                quantity,
+            }),
+        );
+
+        await this.orderproductRepository.save(orderProductsData);
+
+        const transactiondata = await this.transactionRepository.create({
+            ref: await this.generateTransactionRef(),
+            amount: totalAmount,
+            user,
+        });
+
+        const transaction =
+            await this.transactionRepository.save(transactiondata);
+
+        const paystackpayload = {
+            amount: transaction.amount * 100,
+            email: user.emailAddress,
+            reference: transaction.ref,
+            callback_url: this.url + '/orders',
+            metadata: {
+                cancel_action: this.url + '/order/cancel',
+                callback_url: this.url + '/orders',
+            },
+        };
+
+        const addressId = orderaddress.id;
+
+        try {
+            const paystackResponse = await lastValueFrom(
+                this.httpService.post(
+                    'https://api.paystack.co/transaction/initialize',
+                    paystackpayload,
+                    this.paystackHeader,
+                ),
+            );
+
+            if (paystackResponse.status != 200) {
+                throw new BadRequestException(
+                    paystackResponse.data.data.message,
+                );
+            }
+
+            const paymentUrl = paystackResponse.data.data.authorization_url;
+
+            await Promise.all(
+                cart.map((item) => this.cartRepository.delete(item.id)),
+            );
+
+            const userprofile = await this.userprofileRepository.findOne({
                 where: {
-                    id: pictureId,
+                    user: {
+                        id: user.id,
+                    },
                 },
             });
 
-            if (picture) {
-                const productPicture = this.productPictureRepository.create({
-                    product: savedProduct,
-                    picture,
+            const userNotification = {
+                recipients: [`${userprofile.user.emailAddress}`],
+                data: {
+                    name: userprofile.firstName,
+                    orderNo: order.orderNo,
+                    amount: order.totalAmount,
+                },
+            };
+
+            this.noticationService.SendOrderNewOrder(
+                userNotification,
+                () => {},
+            );
+
+            return {
+                data: {
+                    paymentUrl,
+                    orderId: order.id,
+                },
+            };
+        } catch (error) {
+            console.log(error.message);
+
+            await this.orderTransactionRepository.delete({
+                order: { id: order.id },
+            });
+            await this.orderproductRepository.delete({
+                order: { id: order.id },
+            });
+            await this.orderAddressRepository.delete(addressId);
+            await this.orderRepository.delete(order.id);
+
+            throw new BadRequestException(
+                'Payment initialization failed. Please try again.',
+            );
+        }
+    }
+
+    private async generateTransactionRef(
+        prefix: string = 'TXN',
+    ): Promise<string> {
+        const randomString = Math.random().toString(36).substr(2, 9);
+        const timestamp = Date.now();
+
+        const transactionRef = `${prefix}-${randomString}-${timestamp}`;
+        return transactionRef;
+    }
+
+    async paystackWebhook(signature, clientIP, payload: any) {
+        const allowedIPs = mainSettings.infrastructure.paystack.allowedIps;
+        const hash = crypto
+            .createHmac(
+                'sha512',
+                mainSettings.infrastructure.paystack.secretKey,
+            )
+            .update(JSON.stringify(payload))
+            .digest('hex');
+
+        if (!allowedIPs.includes(clientIP)) {
+            throw new ForbiddenException('Forbidden');
+        }
+
+        if (hash == signature) {
+            this.completeOrder(payload);
+            return {
+                statusCode: 200,
+                message: 'OK',
+            };
+        } else {
+            throw new BadRequestException('Not allowed');
+        }
+    }
+
+    private async completeOrder(payload: any) {
+        const { event, data } = payload;
+
+        const { reference } = data;
+
+        const amountPaid = (data.amount / 100).toFixed(2);
+        const transaction = await this.transactionRepository.findOne({
+            where: {
+                ref: reference,
+            },
+            relations: ['user'],
+        });
+
+        if (!transaction) {
+            throw new NotFoundException('Transaction not found');
+        }
+
+        if (event === 'transfer.success' || event === 'charge.success') {
+            if (amountPaid != transaction.amount.toString()) {
+                throw new BadRequestException(
+                    'Amount does not match transaction amount',
+                );
+            }
+
+            await this.transactionRepository.update(transaction.id, {
+                transactionStatus: 'Completed',
+            });
+
+            const orderTransaction =
+                await this.orderTransactionRepository.findOne({
+                    where: {
+                        transaction: {
+                            id: transaction.id,
+                        },
+                    },
+                    relations: ['order'],
                 });
 
-                await this.productPictureRepository.save(productPicture);
-            }
-        }
+            await this.orderRepository.update(orderTransaction.order.id, {
+                status: 'Payment Completed',
+            });
 
-        return {
-            statusCode: 201,
-            message: 'Product created successfully',
-        };
-    }
-
-    async makeProductAvailble(productId: string, authHeader: string) {
-        const isTokenValid = await this.authenticator.validateToken(authHeader);
-
-        if (isTokenValid.type != 0) {
-            throw new UnauthorizedException('Unathorized');
-        }
-
-        const user = await this.userRepository.findOne({
-            where: {
-                id: isTokenValid.userId,
-            },
-        });
-
-        const product = await this.productRepository.findOne({
-            where: {
-                id: productId,
-            },
-        });
-
-        if (!product) {
-            throw new NotFoundException('Product not found');
-        }
-
-        product.isAvailable = true;
-
-        await this.productRepository.save(product);
-
-        return {
-            message: 'Product updated',
-        };
-    }
-
-    async makeProductUnAvailable(productId: string, authHeader: string) {
-        const isTokenValid = await this.authenticator.validateToken(authHeader);
-
-        if (isTokenValid.type != 0) {
-            throw new UnauthorizedException('Unathorized');
-        }
-
-        const user = await this.userRepository.findOne({
-            where: {
-                id: isTokenValid.userId,
-            },
-        });
-
-        const product = await this.productRepository.findOne({
-            where: {
-                id: productId,
-            },
-        });
-
-        if (!product) {
-            throw new NotFoundException('Product not found');
-        }
-
-        product.isAvailable = false;
-
-        await this.productRepository.save(product);
-
-        return {
-            message: 'Product updated',
-        };
-    }
-
-    async getProduct(productId: string, authHeader: string) {
-        const isTokenValid = await this.authenticator.validateToken(authHeader);
-
-        if (isTokenValid.type != 0) {
-            throw new UnauthorizedException('Unathorized');
-        }
-
-        const user = await this.userRepository.findOne({
-            where: {
-                id: isTokenValid.userId,
-            },
-        });
-
-        const product = await this.productRepository.findOne({
-            where: {
-                id: productId,
-            },
-        });
-
-        if (!product) {
-            throw new NotFoundException('Product not found');
-        }
-
-        const productpictures = await this.productPictureRepository.find({
-            where: {
-                product: {
-                    id: product.id,
+            const userprofile = await this.userprofileRepository.findOne({
+                where: {
+                    user: {
+                        id: transaction.user.id,
+                    },
                 },
-            },
-        });
+                relations: ['user'],
+            });
 
-        return {
-            data: {
-                productId: product.id,
-                product: product.product,
-                amount: product.amount,
-                decription: product.description,
-                isAvailble: product.isAvailable,
-                pictures: productpictures.map((picture) => picture.picture.url),
-            },
-        };
-    }
-
-    async updateProduct() {}
-
-    async deleteProduct() {}
-
-    async getAdminProducts() {}
-
-    async getProducts() {}
-
-    async getOrderTransaction() {}
-
-    async getProductsForCustomer() {}
-
-    async initiateOrder() {}
-
-    async completeOrderPayment() {}
-
-    async addToCart(productId: string, authHeader: string) {
-        const isTokenValid = await this.authenticator.validateToken(authHeader);
-
-        if (isTokenValid.type != 0) {
-            throw new UnauthorizedException('Unathorized');
-        }
-
-        const user = await this.userRepository.findOne({
-            where: {
-                id: isTokenValid.userId,
-            },
-        });
-
-        const product = await this.productRepository.findOne({
-            where: {
-                id: productId,
-            },
-        });
-
-        if (!product) {
-            throw new NotFoundException('Product not found');
-        }
-
-        const cartProductExist = await this.cartRepository.findOne({
-            where: {
-                product: {
-                    id: product.id,
+            const admins = await this.userRepository.find({
+                where: {
+                    type: 1,
                 },
-            },
-        });
+            });
 
-        if (cartProductExist) {
-            throw new BadRequestException('Product Exists in Cart');
-        }
+            const adminemails = admins.map((admin) => admin.emailAddress);
 
-        const cart = await this.cartRepository.create({
-            user,
-            product,
-        });
-
-        await this.cartRepository.save(cart);
-
-        return {
-            message: 'Product added to cart',
-        };
-    }
-
-    async increaseProductQuantityInCart(productId: string, authHeader: string) {
-        const isTokenValid = await this.authenticator.validateToken(authHeader);
-
-        if (isTokenValid.type != 0) {
-            throw new UnauthorizedException('Unathorized');
-        }
-
-        const product = await this.productRepository.findOne({
-            where: {
-                id: productId,
-            },
-        });
-
-        if (!product) {
-            throw new NotFoundException('Product not found');
-        }
-
-        const cartProductExist = await this.cartRepository.findOne({
-            where: {
-                product: {
-                    id: product.id,
+            const adminNotification = {
+                recipients: adminemails,
+                data: {
+                    orderNo: orderTransaction.order.orderNo,
                 },
-            },
-        });
+            };
 
-        if (!cartProductExist) {
-            throw new BadRequestException('Product does not exist in Cart');
-        }
-
-        const quantity = cartProductExist.quantity;
-
-        await this.cartRepository.update(cartProductExist.id, {
-            quantity: quantity + 1,
-        });
-
-        return {
-            message: 'Product added to cart',
-        };
-    }
-
-    async decreaseProductQuantityInCart(productId: string, authHeader: string) {
-        const isTokenValid = await this.authenticator.validateToken(authHeader);
-
-        if (isTokenValid.type != 0) {
-            throw new UnauthorizedException('Unathorized');
-        }
-
-        const product = await this.productRepository.findOne({
-            where: {
-                id: productId,
-            },
-        });
-
-        if (!product) {
-            throw new NotFoundException('Product not found');
-        }
-
-        const cartProductExist = await this.cartRepository.findOne({
-            where: {
-                product: {
-                    id: product.id,
+            const userNotification = {
+                recipients: [`${userprofile.user.emailAddress}`],
+                data: {
+                    name: userprofile.firstName,
+                    orderNo: orderTransaction.order.orderNo,
+                    amount: orderTransaction.order.totalAmount,
                 },
-            },
-        });
+            };
 
-        if (!cartProductExist) {
-            throw new BadRequestException('Product does not exist in Cart');
+            this.noticationService.SendOrderNewAdminOrder(
+                userNotification,
+                () => {},
+            );
+
+            this.noticationService.SendOrderPaymentCompleted(
+                userNotification,
+                () => {},
+            );
+
+            return {
+                message: 'Order payment completed',
+            };
         }
-
-        const quantity = cartProductExist.quantity;
-
-        await this.cartRepository.update(cartProductExist.id, {
-            quantity: quantity - 1,
-        });
-
-        return {
-            message: 'Product removed from cart',
-        };
     }
 
-    async removeProductFromCart(productId: string, authHeader: string) {
-        const isTokenValid = await this.authenticator.validateToken(authHeader);
-
-        if (isTokenValid.type != 0) {
-            throw new UnauthorizedException('Unathorized');
-        }
-
-        const product = await this.productRepository.findOne({
-            where: {
-                id: productId,
-            },
-        });
-
-        if (!product) {
-            throw new NotFoundException('Product not found');
-        }
-
-        const cartProductExist = await this.cartRepository.findOne({
-            where: {
-                product: {
-                    id: product.id,
-                },
-            },
-        });
-
-        if (!cartProductExist) {
-            throw new BadRequestException('Product does not exist in Cart');
-        }
-
-        await this.cartRepository.delete(cartProductExist.id);
-
-        return {
-            message: 'Product removed from cart',
-        };
-    }
-
-    async cancelOrder(orderId: string, authHeader: string) {
+    async cancelOrder(orderId: string, type: string, authHeader: string) {
         const isTokenValid = await this.authenticator.validateToken(authHeader);
 
         if (isTokenValid.type != 0) {
@@ -429,6 +387,7 @@ export class CoreService {
                     id: isTokenValid.userId,
                 },
             },
+            relations: ['user'],
         });
 
         if (!userprofile) {
@@ -449,14 +408,25 @@ export class CoreService {
             order.status != 'Pending Payment Confirmation' &&
             order.status != 'Payment Completed'
         ) {
-            throw new BadRequestException(
-                'Order not pending/payment completed',
-            );
+            throw new BadRequestException('Order can not be cancelled');
         }
 
-        await this.orderRepository.update(order.id, {
-            status: 'Cancelled',
-        });
+        if (type == 'payment') {
+            await this.orderRepository.update(order.id, {
+                status: 'Cancelled',
+            });
+        } else if (type == 'paymentcancelled') {
+            await this.orderTransactionRepository.delete({
+                order: { id: order.id },
+            });
+            await this.orderproductRepository.delete({
+                order: { id: order.id },
+            });
+            await this.orderAddressRepository.delete({
+                order: { id: order.id },
+            });
+            await this.orderRepository.delete(order.id);
+        }
 
         const usernotification = {
             recipients: [`${userprofile.user.emailAddress}`],
@@ -472,14 +442,84 @@ export class CoreService {
         );
 
         return {
-            message: 'Updated to Cancelled',
+            message: 'Order Cancelled',
+        };
+    }
+
+    async getSellerTransactions(query: GetTransaction, authHeader: string) {
+        const isTokenValid = await this.authenticator.validateToken(authHeader);
+
+        if (
+            isTokenValid.type != 2 &&
+            isTokenValid.type != 1 &&
+            isTokenValid.type != 3
+        ) {
+            throw new UnauthorizedException('Unauthorized');
+        }
+
+        const sellerId = query.sellerId || isTokenValid.userId;
+
+        const seller = await this.userRepository.findOne({
+            where: { id: sellerId },
+        });
+
+        if (!seller) {
+            throw new NotFoundException('Seller not Found');
+        }
+
+        const { skip, take } = this.helperUtil.paginate(query.page, query.size);
+
+        const [orderProducts, total] =
+            await this.orderproductRepository.findAndCount({
+                where: {
+                    order: {
+                        status: Not(In(['Pending Payment Confirmation'])),
+                    },
+                    product: { user: { id: sellerId } },
+                },
+                relations: ['order', 'product'],
+                skip,
+                take,
+            });
+
+        const transactions = await Promise.all(
+            orderProducts.map(async (orderProduct) => {
+                const orderTransaction =
+                    await this.orderTransactionRepository.findOne({
+                        where: { order: { id: orderProduct.order.id } },
+                        relations: ['transaction'],
+                    });
+
+                if (!orderTransaction || !orderTransaction.transaction) {
+                    return null;
+                }
+
+                return {
+                    orderNo: orderProduct.order.orderNo,
+                    description: orderProduct.order.description,
+                    amount: orderTransaction.transaction.amount,
+                    transactionref: orderTransaction.transaction.ref,
+                    status: orderTransaction.transaction.transactionStatus,
+                };
+            }),
+        );
+
+        const filteredTransactions = transactions.filter(Boolean);
+
+        return {
+            data: {
+                transactions: filteredTransactions,
+                currentPage: query.page ?? 0,
+                totalPages: Math.ceil(total / take),
+                totalAddresses: total,
+            },
         };
     }
 
     async getOrders(query: GetOrders, authHeader: string) {
         const isTokenValid = await this.authenticator.validateToken(authHeader);
 
-        if (isTokenValid.type != 1) {
+        if (isTokenValid.type != 3 && isTokenValid.type != 1) {
             throw new UnauthorizedException('Unathorized');
         }
 
@@ -527,6 +567,7 @@ export class CoreService {
                             id: product.id,
                         },
                     },
+                    relations: ['picture'],
                 });
 
                 const productpictureurls = pictures.map(
@@ -572,7 +613,7 @@ export class CoreService {
     async getNewOrders(query: GetOrders, authHeader: string) {
         const isTokenValid = await this.authenticator.validateToken(authHeader);
 
-        if (isTokenValid.type != 1) {
+        if (isTokenValid.type != 3 && isTokenValid.type != 1) {
             throw new UnauthorizedException('Unathorized');
         }
 
@@ -614,6 +655,7 @@ export class CoreService {
                             id: product.id,
                         },
                     },
+                    relations: ['picture'],
                 });
 
                 const productpictureurls = pictures.map(
@@ -649,7 +691,7 @@ export class CoreService {
     async getUserOrders(query: GetOrders, authHeader: string) {
         const isTokenValid = await this.authenticator.validateToken(authHeader);
 
-        if (isTokenValid != 0) {
+        if (isTokenValid.type != 0) {
             throw new UnauthorizedException('Unathorized');
         }
 
@@ -698,6 +740,7 @@ export class CoreService {
                             id: orderproducts[0].product.id,
                         },
                     },
+                    relations: ['picture'],
                 });
 
                 const productpictureurls = pictures.map(
@@ -730,7 +773,11 @@ export class CoreService {
     async getOrder(orderId: string, authHeader: string) {
         const isTokenValid = await this.authenticator.validateToken(authHeader);
 
-        if (isTokenValid.type != 1 && isTokenValid != 0) {
+        if (
+            isTokenValid.type != 1 &&
+            isTokenValid.type != 3 &&
+            isTokenValid.type != 0
+        ) {
             throw new UnauthorizedException('Unathorized');
         }
 
@@ -762,6 +809,7 @@ export class CoreService {
                         id: orderproduct.product.id,
                     },
                 },
+                relations: ['picture'],
             });
 
             const productpictureurls = pictures.map(
@@ -770,7 +818,7 @@ export class CoreService {
 
             products.push({
                 product: orderproduct.product.product,
-                amount: orderproduct.price,
+                amount: orderproduct.amount,
                 quantity: orderproduct.quantity,
                 description: orderproduct.product.description,
                 pictureUrls: productpictureurls,
@@ -783,6 +831,7 @@ export class CoreService {
                     id: order.id,
                 },
             },
+            relations: ['address'],
         });
 
         let nextAction: string;
@@ -813,7 +862,7 @@ export class CoreService {
     async updateOrdertoPackaging(orderId: string, authHeader: string) {
         const isTokenValid = await this.authenticator.validateToken(authHeader);
 
-        if (isTokenValid.type != 1) {
+        if (isTokenValid.type != 3 && isTokenValid.type != 1) {
             throw new UnauthorizedException('Unathorized');
         }
 
@@ -823,6 +872,7 @@ export class CoreService {
                     id: isTokenValid.userId,
                 },
             },
+            relations: ['user'],
         });
 
         if (!userprofile) {
@@ -870,7 +920,7 @@ export class CoreService {
     async updateOrdertoPackaged(orderId: string, authHeader: string) {
         const isTokenValid = await this.authenticator.validateToken(authHeader);
 
-        if (isTokenValid.type != 1) {
+        if (isTokenValid.type != 3 && isTokenValid.type != 1) {
             throw new UnauthorizedException('Unathorized');
         }
 
@@ -880,6 +930,7 @@ export class CoreService {
                     id: isTokenValid.userId,
                 },
             },
+            relations: ['user'],
         });
 
         if (!userprofile) {
@@ -927,7 +978,7 @@ export class CoreService {
     async updateOrdertoOutForDelivery(orderId: string, authHeader: string) {
         const isTokenValid = await this.authenticator.validateToken(authHeader);
 
-        if (isTokenValid.type != 1) {
+        if (isTokenValid.type != 3 && isTokenValid.type != 1) {
             throw new UnauthorizedException('Unathorized');
         }
 
@@ -937,6 +988,7 @@ export class CoreService {
                     id: isTokenValid.userId,
                 },
             },
+            relations: ['user'],
         });
 
         if (!userprofile) {
@@ -984,7 +1036,7 @@ export class CoreService {
     async updateOrdertoDelivered(orderId: string, authHeader: string) {
         const isTokenValid = await this.authenticator.validateToken(authHeader);
 
-        if (isTokenValid.type != 1) {
+        if (isTokenValid.type != 3 && isTokenValid.type != 1) {
             throw new UnauthorizedException('Unathorized');
         }
 
@@ -994,6 +1046,7 @@ export class CoreService {
                     id: isTokenValid.userId,
                 },
             },
+            relations: ['user'],
         });
 
         if (!userprofile) {

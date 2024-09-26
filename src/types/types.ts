@@ -61,9 +61,33 @@ export class GetOrders {
     size: number;
 }
 
+export class GetTransaction {
+    page: number;
+    size: number;
+    sellerId?: string;
+}
+
+export class GetProducts {
+    page: number;
+    size: number;
+    sellerId?: string;
+    categoryId?: string;
+    search?: string;
+}
+
 export class CreateProduct {
     product: string;
     amount: number;
     description: string;
     pictures: any;
+    categoryId: string;
+}
+
+export class CreateCategory {
+    category: string;
+}
+
+export class UpdateCategory {
+    category: string;
+    categoryId: string;
 }

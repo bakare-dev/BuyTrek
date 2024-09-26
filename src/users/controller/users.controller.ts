@@ -58,21 +58,6 @@ export class UsersController {
         return this.userService.completePasswordReset(completePasswordResetDto);
     }
 
-    @Post('/refresh-token')
-    getRefreshToken(@Headers('authorization') authHeader: string) {
-        if (!authHeader) {
-            throw new UnauthorizedException('Authorization header is missing');
-        }
-
-        const [type, refreshToken] = authHeader.split(' ');
-
-        if (type != 'Bearer' || !refreshToken) {
-            throw new UnauthorizedException('Invalid token format');
-        }
-
-        return this.userService.generateNewAccessToken(refreshToken);
-    }
-
     @Post('/sign-out')
     logout(@Headers('authorization') authHeader: string) {
         return this.userService.Logout(authHeader);

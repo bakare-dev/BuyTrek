@@ -124,12 +124,17 @@ export class UserService {
             profileExist = true;
         }
 
-        const token = await this.authenticator.generateToken(user.id, 1);
+        const token = await this.authenticator.generateToken(
+            user.id,
+            user.type,
+        );
 
-        let type = 'User';
+        let type = 'Buyer';
 
         if (user.type == 1) {
             type = 'Admin';
+        } else if (user.type == 2) {
+            type = 'Seller';
         }
 
         return {
@@ -328,15 +333,6 @@ export class UserService {
 
         return {
             message: 'Password reset successful',
-        };
-    }
-
-    async generateNewAccessToken(refreshToken: string) {
-        const newTokens =
-            await this.authenticator.getNewTokenUsingRefreshToken(refreshToken);
-
-        return {
-            data: newTokens,
         };
     }
 

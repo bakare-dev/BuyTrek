@@ -5,6 +5,7 @@ import {
     CreateDateColumn,
     UpdateDateColumn,
     OneToOne,
+    JoinColumn,
 } from 'typeorm';
 import { Order } from './order.entity';
 import { Transaction } from './transaction.entity';
@@ -20,6 +21,7 @@ export class OrderTransaction {
     @OneToOne(() => Transaction, (transaction) => transaction.id, {
         nullable: false,
     })
+    @JoinColumn()
     transaction: Transaction;
 
     @CreateDateColumn({ type: 'timestamp' })

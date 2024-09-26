@@ -17,16 +17,14 @@ export class OrderProduct {
     @ManyToOne(() => Order, (order) => order.id, { nullable: false })
     order: Order;
 
-    @ManyToOne(() => Product, (product) => product.id, {
-        nullable: false,
-    })
+    @ManyToOne(() => Product, (product) => product.id)
     product: Product;
 
     @Column({ type: 'int' })
     quantity: number;
 
     @Column({ type: 'decimal', precision: 10, scale: 2 })
-    price: number;
+    amount: number;
 
     @CreateDateColumn({ type: 'timestamp' })
     createdAt: Date;

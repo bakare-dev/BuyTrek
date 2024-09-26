@@ -7,6 +7,7 @@ import {
     ManyToOne,
 } from 'typeorm';
 import { User } from './user.entity';
+import { Category } from './category.entity';
 
 @Entity({ name: 'products' })
 export class Product {
@@ -16,7 +17,7 @@ export class Product {
     @Column()
     product: string;
 
-    @Column('float')
+    @Column({ type: 'decimal', precision: 10, scale: 2 })
     amount: number;
 
     @Column()
@@ -24,6 +25,9 @@ export class Product {
 
     @Column({ default: true })
     isAvailable: boolean;
+
+    @ManyToOne(() => Category, (category) => category.id)
+    category: Category;
 
     @CreateDateColumn({ type: 'timestamp' })
     createdAt: Date;

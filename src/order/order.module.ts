@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { CoreController } from './controller/core.controller';
-import { CoreService } from './service/core.service';
+import { OrderController } from './controller/order.controller';
+import { OrderService } from './service/order.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Address } from '../entities/address.entity';
 import { Picture } from '../entities/picture.entity';
@@ -14,9 +14,12 @@ import { OrderAddress } from '../entities/orderaddress.entity';
 import { OrderProduct } from '../entities/orderproduct.entity';
 import { OrderTransaction } from '../entities/ordertransaction.entities';
 import { ProductPicture } from '../entities/productpicture.entity';
+import { Category } from '../entities/category.entity';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
     imports: [
+        HttpModule,
         TypeOrmModule.forFeature([
             Address,
             Picture,
@@ -30,9 +33,10 @@ import { ProductPicture } from '../entities/productpicture.entity';
             OrderProduct,
             OrderTransaction,
             ProductPicture,
+            Category,
         ]),
     ],
-    controllers: [CoreController],
-    providers: [CoreService],
+    controllers: [OrderController],
+    providers: [OrderService],
 })
-export class CoreModule {}
+export class OrderModule {}

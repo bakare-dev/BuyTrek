@@ -9,10 +9,9 @@ export class AuthenticationUtils {
     private readonly JWT_SECRET = mainSettings.security.jwtSecret;
     private readonly JWT_EXPIRES_IN = '1h';
     private readonly REFRESH_TOKEN_EXPIRES_IN = '7d';
-    private logger;
 
     constructor(@Inject('CACHE_MANAGER') private cacheManager: Cache) {
-        this.logger = new WinstonLoggerService();
+        
     }
 
     async generateToken(userId: string, type: number) {
@@ -29,27 +28,10 @@ export class AuthenticationUtils {
             3600,
         );
 
-        const refreshTokenExpiresIn = new Date(
-            now.getTime() + 7 * 24 * 3600 * 1000,
-        );
-        const refreshToken = jwt.sign({ userId, type }, this.JWT_SECRET, {
-            expiresIn: this.REFRESH_TOKEN_EXPIRES_IN,
-        });
-
-        await this.cacheManager.set(
-            `refresh-token-${userId}`,
-            refreshToken,
-            604800,
-        );
-
         return {
             accessToken: {
                 token: accessToken,
                 expiresIn: accessTokenExpiresIn.toISOString(),
-            },
-            refreshToken: {
-                token: refreshToken,
-                expiresIn: refreshTokenExpiresIn.toISOString(),
             },
         };
     }
@@ -74,30 +56,8 @@ export class AuthenticationUtils {
         }
     }
 
-    async getNewTokenUsingRefreshToken(refreshToken: string) {
-        try {
-            const decoded = jwt.verify(refreshToken, this.JWT_SECRET);
-            const cachedRefreshToken = await this.cacheManager.get(
-                `refresh-token-${decoded.userId}`,
-            );
-            if (!cachedRefreshToken || cachedRefreshToken != refreshToken) {
-                throw new UnauthorizedException('Unauthorized');
-            }
-
-            const newTokens = await this.generateToken(
-                decoded.userId,
-                decoded.type,
-            );
-            return newTokens;
-        } catch (error) {
-            this.logger.error(error);
-            throw new UnauthorizedException('Unauthorized');
-        }
-    }
-
     async logout(userId: string) {
         await this.cacheManager.del(`access-token-${userId}`);
-        await this.cacheManager.del(`refresh-token-${userId}`);
     }
 
     async generateOtp(userId: string): Promise<string> {

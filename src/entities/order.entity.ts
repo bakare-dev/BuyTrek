@@ -16,7 +16,7 @@ export class Order {
     @Column()
     orderNo: string;
 
-    @ManyToOne(() => User, (user) => user.id, { nullable: false })
+    @ManyToOne(() => User, (user) => user.id)
     user: User;
 
     @Column({ type: 'decimal', precision: 10, scale: 2 })

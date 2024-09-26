@@ -1,30 +1,20 @@
 import {
-    Column,
     Entity,
     PrimaryGeneratedColumn,
+    Column,
+    ManyToOne,
     CreateDateColumn,
     UpdateDateColumn,
 } from 'typeorm';
+import { User } from './user.entity';
 
-@Entity({ name: 'users' })
-export class User {
+@Entity({ name: 'categories' })
+export class Category {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @Column({ unique: true })
-    emailAddress: string;
-
     @Column()
-    password: string;
-
-    @Column()
-    salt: string;
-
-    @Column({ default: false })
-    activated: boolean;
-
-    @Column()
-    type: number; // 0-user, 1-admin, 2-seller, 3-customercare
+    category: string;
 
     @CreateDateColumn({ type: 'timestamp' })
     createdAt: Date;
