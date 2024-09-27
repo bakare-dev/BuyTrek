@@ -174,6 +174,7 @@ export class ProductService {
             where: {
                 id: productId,
             },
+            relations: ['user'],
         });
 
         if (!product) {
