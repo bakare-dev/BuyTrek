@@ -5,6 +5,8 @@ import {
     CreateDateColumn,
     UpdateDateColumn,
     Column,
+    OneToOne,
+    JoinColumn,
 } from 'typeorm';
 import { Product } from './product.entity';
 import { User } from './user.entity';
@@ -14,11 +16,9 @@ export class ProductInventory {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @ManyToOne(() => Product, (product) => product.id)
+    @OneToOne(() => Product, (product) => product.id)
+    @JoinColumn()
     product: Product;
-
-    @ManyToOne(() => User, (user) => user.id)
-    user: User;
 
     @Column()
     quantityInStock: number;

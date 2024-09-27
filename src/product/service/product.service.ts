@@ -880,7 +880,6 @@ export class ProductService {
             const newInventory = this.inventoryRepository.create({
                 totalQuantity: payload.totalQuantity,
                 quantityInStock: payload.totalQuantity,
-                user,
                 product,
             });
             await this.inventoryRepository.save(newInventory);
@@ -960,8 +959,8 @@ export class ProductService {
 
         const inventory = await this.inventoryRepository.find({
             where: {
-                user: {
-                    id: user.id,
+                product: {
+                    user: { id: user.id },
                 },
             },
             skip,
@@ -994,7 +993,7 @@ export class ProductService {
         const { skip, take } = this.helperUtil.paginate(query.page, query.size);
 
         const inventory = await this.inventoryRepository.find({
-            relations: ['product', 'user'],
+            relations: ['product'],
             skip,
             take,
         });
@@ -1006,7 +1005,7 @@ export class ProductService {
                 product: item.product.product,
                 quantityInStock: item.quantityInStock,
                 totalQuantity: item.totalQuantity,
-                sellerId: item.user.id,
+                sellerId: item.product.user.id,
             });
         });
 
