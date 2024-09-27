@@ -137,10 +137,15 @@ export class ProductService {
             where: {
                 id: productId,
             },
+            relations: ['user'],
         });
 
         if (!product) {
             throw new NotFoundException('Product not found');
+        }
+
+        if (user.id != product.user.id) {
+            throw new BadRequestException('Unauthorized');
         }
 
         product.isAvailable = true;
@@ -173,6 +178,10 @@ export class ProductService {
 
         if (!product) {
             throw new NotFoundException('Product not found');
+        }
+
+        if (user.id != product.user.id) {
+            throw new BadRequestException('Unauthorized');
         }
 
         product.isAvailable = false;
@@ -293,10 +302,15 @@ export class ProductService {
 
         const productData = await this.productRepository.findOne({
             where: { id: productId },
+            relations: ['user'],
         });
 
         if (!productData) {
             throw new NotFoundException('Product not found');
+        }
+
+        if (isTokenValid.userId != productData.user.id) {
+            throw new BadRequestException('Unauthorized');
         }
 
         if (pictures && pictures.length > 0) {
@@ -356,10 +370,17 @@ export class ProductService {
             where: {
                 id: productId,
             },
+            relations: ['user'],
         });
 
         if (!productData) {
             throw new NotFoundException('Product not Found');
+        }
+
+        if (isTokenValid.type == 2) {
+            if (isTokenValid.userId != productData.user.id) {
+                throw new BadRequestException('Unauthorized');
+            }
         }
 
         await this.inventoryRepository.delete({
@@ -841,6 +862,10 @@ export class ProductService {
         const { user } = product;
         if (!user) {
             throw new NotFoundException('User not found');
+        }
+
+        if (isTokenValid.userId != user.id) {
+            throw new BadRequestException('Unauthorized');
         }
 
         const productInventory = await this.inventoryRepository.findOne({
