@@ -14,6 +14,8 @@ import { OrderTransaction } from '../entities/ordertransaction.entities';
 import { OrderProduct } from '../entities/orderproduct.entity';
 import { Category } from '../entities/category.entity';
 import mainSettings from '../config/main.settings';
+import { ProductRating } from '../entities/productrating.entity';
+import { ProductInventory } from '../entities/productinventory.entity';
 
 const dbConfig =
     mainSettings.infrastructure.environment == 'production'
@@ -35,6 +37,8 @@ export const DatabaseEngine: TypeOrmModuleOptions = {
         Address,
         Product,
         ProductPicture,
+        ProductRating,
+        ProductInventory,
         Cart,
         Order,
         OrderAddress,

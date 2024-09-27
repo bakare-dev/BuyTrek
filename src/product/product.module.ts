@@ -7,6 +7,8 @@ import { User } from '../entities/user.entity';
 import { Picture } from '../entities/picture.entity';
 import { ProductPicture } from '../entities/productpicture.entity';
 import { Category } from '../entities/category.entity';
+import { ProductInventory } from '../entities/productinventory.entity';
+import { ProductRating } from '../entities/productrating.entity';
 
 @Module({
     imports: [
@@ -16,6 +18,8 @@ import { Category } from '../entities/category.entity';
             Picture,
             ProductPicture,
             Category,
+            ProductInventory,
+            ProductRating,
         ]),
     ],
     controllers: [ProductController],

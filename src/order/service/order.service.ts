@@ -28,6 +28,7 @@ import mainSettings from 'src/config/main.settings';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
 import * as crypto from 'crypto';
+import { ProductInventory } from 'src/entities/productinventory.entity';
 
 @Injectable()
 export class OrderService {
@@ -66,6 +67,9 @@ export class OrderService {
 
         @InjectRepository(Transaction)
         private transactionRepository: Repository<Transaction>,
+
+        @InjectRepository(ProductInventory)
+        private inventoryRepository: Repository<ProductInventory>,
 
         @Inject(CACHE_MANAGER) private cacheManager: Cache,
 
@@ -907,26 +911,82 @@ export class OrderService {
             );
         }
 
-        await this.orderRepository.update(order.id, {
-            status: 'Packaging',
+        const orderproducts = await this.orderproductRepository.find({
+            where: {
+                order: {
+                    id: order.id,
+                },
+            },
+            relations: ['product'],
         });
 
-        const usernotification = {
-            recipients: [`${userprofile.user.emailAddress}`],
-            data: {
-                orderNo: order.orderNo,
-                name: userprofile.firstName,
-            },
-        };
+        let error = false;
+        let messages = [];
 
-        this.noticationService.SendOrderPackaging(
-            usernotification,
-            (resp) => {},
-        );
+        const updatePromises = orderproducts.map(async (orderproduct) => {
+            const inventory = await this.inventoryRepository.findOne({
+                where: {
+                    product: {
+                        id: orderproduct.product.id,
+                    },
+                },
+            });
 
-        return {
-            message: 'Updated to Packaging',
-        };
+            if (!inventory) {
+                error = true;
+                messages.push(
+                    `Product not found for ID: ${orderproduct.product.id}`,
+                );
+                return;
+            }
+
+            const buyingQuantity = orderproduct.quantity;
+            const available = inventory.quantityInStock;
+            const totalQuantity = inventory.totalQuantity;
+            const afterBuying = available - buyingQuantity;
+
+            if (totalQuantity != available) {
+                if (afterBuying < 0) {
+                    error = true;
+                    messages.push(
+                        `Not enough stock for ${orderproduct.product.product}, ${Math.abs(afterBuying)} needed`,
+                    );
+                }
+            }
+
+            await this.inventoryRepository.update(inventory.id, {
+                quantityInStock: afterBuying,
+            });
+        });
+
+        await Promise.all(updatePromises);
+
+        if (!error) {
+            await this.orderRepository.update(order.id, {
+                status: 'Packaging',
+            });
+
+            const userNotification = {
+                recipients: [`${userprofile.user.emailAddress}`],
+                data: {
+                    orderNo: order.orderNo,
+                    name: userprofile.firstName,
+                },
+            };
+
+            this.noticationService.SendOrderPackaging(
+                userNotification,
+                (resp) => {},
+            );
+
+            return {
+                message: 'Updated to Packaging',
+            };
+        } else {
+            return {
+                message: messages.join(', '),
+            };
+        }
     }
 
     async updateOrdertoPackaged(orderId: string, authHeader: string) {

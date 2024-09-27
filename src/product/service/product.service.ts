@@ -17,6 +17,8 @@ import { HelperUtil } from '../../utils/Helper';
 import { In, Like, Repository } from 'typeorm';
 import { CreateProduct, GetProducts } from '../../types/types';
 import { Category } from '../../entities/category.entity';
+import { ProductInventory } from '../../entities/productinventory.entity';
+import { ProductRating } from '../../entities/productrating.entity';
 
 @Injectable()
 export class ProductService {
@@ -37,6 +39,12 @@ export class ProductService {
 
         @InjectRepository(Category)
         private categoryRepository: Repository<Category>,
+
+        @InjectRepository(ProductRating)
+        private productratingRepository: Repository<ProductRating>,
+
+        @InjectRepository(ProductInventory)
+        private inventoryRepository: Repository<ProductInventory>,
 
         @Inject(CACHE_MANAGER) private cacheManager: Cache,
     ) {
@@ -186,6 +194,28 @@ export class ProductService {
             relations: ['picture'],
         });
 
+        const productratings = await this.productratingRepository.find({
+            where: {
+                product: {
+                    id: product.id,
+                },
+            },
+        });
+
+        const ratings = productratings.map(
+            (productrating) => productrating.rating,
+        );
+        const comments = productratings.map(
+            (productrating) => productrating.review,
+        );
+
+        const averageRating =
+            ratings.reduce((acc, rating) => acc + rating, 0) / ratings.length;
+
+        const filteredComments = comments.filter(
+            (comment) => comment != null && comment != undefined,
+        );
+
         return {
             data: {
                 productId: product.id,
@@ -197,6 +227,8 @@ export class ProductService {
                     url: picture.picture.url,
                     id: picture.picture.id,
                 })),
+                averageRating,
+                filteredComments,
             },
         };
     }
@@ -315,6 +347,12 @@ export class ProductService {
             throw new NotFoundException('Product not Found');
         }
 
+        await this.inventoryRepository.delete({
+            product: {
+                id: productData.id,
+            },
+        });
+
         await this.productPictureRepository.delete({
             product: {
                 id: productData.id,
@@ -392,6 +430,29 @@ export class ProductService {
 
             const pictureurls = pictures.map((picture) => picture.picture.url);
 
+            const productratings = await this.productratingRepository.find({
+                where: {
+                    product: {
+                        id: product.id,
+                    },
+                },
+            });
+
+            const ratings = productratings.map(
+                (productrating) => productrating.rating,
+            );
+            const comments = productratings.map(
+                (productrating) => productrating.review,
+            );
+
+            const averageRating =
+                ratings.reduce((acc, rating) => acc + rating, 0) /
+                ratings.length;
+
+            const filteredComments = comments.filter(
+                (comment) => comment != null && comment != undefined,
+            );
+
             productData.push({
                 productId: product.id,
                 description: product.description,
@@ -401,6 +462,8 @@ export class ProductService {
                 category: product.category.category,
                 categoryId: product.category.id,
                 pictureurls,
+                averageRating,
+                filteredComments,
             });
         }
 
@@ -449,6 +512,29 @@ export class ProductService {
 
             const pictureurls = pictures.map((picture) => picture.picture.url);
 
+            const productratings = await this.productratingRepository.find({
+                where: {
+                    product: {
+                        id: product.id,
+                    },
+                },
+            });
+
+            const ratings = productratings.map(
+                (productrating) => productrating.rating,
+            );
+            const comments = productratings.map(
+                (productrating) => productrating.review,
+            );
+
+            const averageRating =
+                ratings.reduce((acc, rating) => acc + rating, 0) /
+                ratings.length;
+
+            const filteredComments = comments.filter(
+                (comment) => comment != null && comment != undefined,
+            );
+
             productData.push({
                 productId: product.id,
                 description: product.description,
@@ -457,6 +543,8 @@ export class ProductService {
                 category: product.category.category,
                 categoryId: product.category.id,
                 pictureurls,
+                averageRating,
+                filteredComments,
             });
         }
 
@@ -536,6 +624,29 @@ export class ProductService {
 
             const pictureurls = pictures.map((picture) => picture.picture.url);
 
+            const productratings = await this.productratingRepository.find({
+                where: {
+                    product: {
+                        id: product.id,
+                    },
+                },
+            });
+
+            const ratings = productratings.map(
+                (productrating) => productrating.rating,
+            );
+            const comments = productratings.map(
+                (productrating) => productrating.review,
+            );
+
+            const averageRating =
+                ratings.reduce((acc, rating) => acc + rating, 0) /
+                ratings.length;
+
+            const filteredComments = comments.filter(
+                (comment) => comment != null && comment != undefined,
+            );
+
             productData.push({
                 productId: product.id,
                 description: product.description,
@@ -545,6 +656,8 @@ export class ProductService {
                 category: product.category.category,
                 categoryId: product.category.id,
                 pictureurls,
+                averageRating,
+                filteredComments,
             });
         }
 
@@ -595,6 +708,29 @@ export class ProductService {
 
             const pictureurls = pictures.map((picture) => picture.picture.url);
 
+            const productratings = await this.productratingRepository.find({
+                where: {
+                    product: {
+                        id: product.id,
+                    },
+                },
+            });
+
+            const ratings = productratings.map(
+                (productrating) => productrating.rating,
+            );
+            const comments = productratings.map(
+                (productrating) => productrating.review,
+            );
+
+            const averageRating =
+                ratings.reduce((acc, rating) => acc + rating, 0) /
+                ratings.length;
+
+            const filteredComments = comments.filter(
+                (comment) => comment != null && comment != undefined,
+            );
+
             productData.push({
                 productId: product.id,
                 description: product.description,
@@ -604,6 +740,8 @@ export class ProductService {
                 category: product.category.category,
                 categoryId: product.category.id,
                 pictureurls,
+                averageRating,
+                filteredComments,
             });
         }
 
@@ -615,5 +753,55 @@ export class ProductService {
                 totalAddresses: total,
             },
         };
+    }
+
+    async addRatingandComment(
+        payload: {
+            productId: string;
+            rating: number;
+            comment?: string;
+        },
+        authHeader: string,
+    ) {
+        const isTokenValid = await this.authenticator.validateToken(authHeader);
+
+        if (isTokenValid.type != 0) {
+            throw new UnauthorizedException('Unathorized');
+        }
+    }
+
+    async addNewStock(
+        payload: { productId: string; totalQuantity: number },
+        authHeader: string,
+    ) {
+        const isTokenValid = await this.authenticator.validateToken(authHeader);
+
+        if (isTokenValid.type != 2) {
+            throw new UnauthorizedException('Unathorized');
+        }
+    }
+
+    async requestStockUpdate(productId: string, authHeader: string) {
+        const isTokenValid = await this.authenticator.validateToken(authHeader);
+
+        if (isTokenValid.type != 3 && isTokenValid.type != 1) {
+            throw new UnauthorizedException('Unathorized');
+        }
+    }
+
+    async getSellerInventory(authHeader: string) {
+        const isTokenValid = await this.authenticator.validateToken(authHeader);
+
+        if (isTokenValid.type != 2) {
+            throw new UnauthorizedException('Unathorized');
+        }
+    }
+
+    async getAdminInventory(authHeader: string) {
+        const isTokenValid = await this.authenticator.validateToken(authHeader);
+
+        if (isTokenValid.type != 3 && isTokenValid.type != 1) {
+            throw new UnauthorizedException('Unathorized');
+        }
     }
 }

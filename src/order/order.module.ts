@@ -16,6 +16,7 @@ import { OrderTransaction } from '../entities/ordertransaction.entities';
 import { ProductPicture } from '../entities/productpicture.entity';
 import { Category } from '../entities/category.entity';
 import { HttpModule } from '@nestjs/axios';
+import { ProductInventory } from '../entities/productinventory.entity';
 
 @Module({
     imports: [
@@ -34,6 +35,7 @@ import { HttpModule } from '@nestjs/axios';
             OrderTransaction,
             ProductPicture,
             Category,
+            ProductInventory,
         ]),
     ],
     controllers: [OrderController],
