@@ -9,9 +9,9 @@ export class WinstonLoggerService implements LoggerService {
     private readonly logger: winston.Logger;
 
     constructor() {
-        // const logtail = new Logtail(
-        //   mainSettings.infrastructure.winston.sourceToken,
-        // );
+        const logtail = new Logtail(
+            mainSettings.infrastructure.winston.sourceToken,
+        );
 
         const logFormat = winston.format.printf(
             ({ level, message, timestamp }) => {
@@ -23,7 +23,7 @@ export class WinstonLoggerService implements LoggerService {
             level: 'info',
             format: winston.format.combine(logFormat),
             transports: [
-                // new LogtailTransport(logtail),
+                new LogtailTransport(logtail),
                 new winston.transports.Console({
                     format: winston.format.combine(
                         winston.format.colorize(),
