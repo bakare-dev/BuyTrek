@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Out of Stock Notification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            background-color: #f44336;
+            /* Red for out of stock notification */
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+        }
+
+        .content {
+            padding: 20px;
+            text-align: left;
+        }
+
+        .product-name {
+            font-weight: bold;
+            color: #f44336;
+            /* Red for emphasis */
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #888;
+            border-top: 1px solid #f4f4f4;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Product Out of Stock</h1>
+        </div>
+        <div class="content">
+            <p>Hello <%= name %>,</p>
+            <p>We want to inform you that the product <span class="product-name">
+                    <%= product %>
+                </span> is currently out of
+                stock.</p>
+            <p>Please update the inventory and make the product available for sale at your earliest convenience.</p>
+            <p>Thank you for your prompt attention to this matter!</p>
+        </div>
+        <div class="footer">
+            <p>&copy; 2024 BuyTrek. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+
+</html>

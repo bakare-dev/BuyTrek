@@ -37,7 +37,7 @@ import { HelperUtil } from 'src/utils/Helper';
 export class UserService {
     private logger;
     private authenticator;
-    private noticationService = new NotificationService();
+    private notificationService = new NotificationService();
     private helperUtil;
 
     constructor(
@@ -177,7 +177,7 @@ export class UserService {
             },
         };
 
-        this.noticationService.sendVerifyRegistration(
+        this.notificationService.sendVerifyRegistration(
             userNotification,
             () => {},
         );
@@ -218,7 +218,7 @@ export class UserService {
             data: {},
         };
 
-        this.noticationService.SendActivatedAccount(userNotification, () => {});
+        this.notificationService.SendActivatedAccount(userNotification, () => {});
 
         return {
             message: 'Account activated successfully',
@@ -245,7 +245,7 @@ export class UserService {
             },
         };
 
-        this.noticationService.sendVerifyRegistration(
+        this.notificationService.sendVerifyRegistration(
             userNotification,
             () => {},
         );
@@ -275,7 +275,7 @@ export class UserService {
             },
         };
 
-        this.noticationService.SendInitiateResetPasswordOtp(
+        this.notificationService.SendInitiateResetPasswordOtp(
             userNotification,
             () => {},
         );
@@ -326,7 +326,7 @@ export class UserService {
             data: {},
         };
 
-        this.noticationService.SendCompleteResetPasswordOtp(
+        this.notificationService.SendCompleteResetPasswordOtp(
             userNotification,
             () => {},
         );

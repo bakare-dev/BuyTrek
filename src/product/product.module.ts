@@ -9,6 +9,7 @@ import { ProductPicture } from '../entities/productpicture.entity';
 import { Category } from '../entities/category.entity';
 import { ProductInventory } from '../entities/productinventory.entity';
 import { ProductRating } from '../entities/productrating.entity';
+import { UserProfile } from '../entities/userprofile.entity';
 
 @Module({
     imports: [
@@ -20,6 +21,7 @@ import { ProductRating } from '../entities/productrating.entity';
             Category,
             ProductInventory,
             ProductRating,
+            UserProfile,
         ]),
     ],
     controllers: [ProductController],

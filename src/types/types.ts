@@ -91,3 +91,20 @@ export class UpdateCategory {
     category: string;
     categoryId: string;
 }
+
+export class RatingProduct {
+    productId: string;
+    rating: number;
+    comment?: string;
+}
+
+export class CreateInventory {
+    productId: string;
+    totalQuantity: number;
+}
+
+export class GetInventory {
+    page: number;
+    size: number;
+    sellerId?: string;
+}

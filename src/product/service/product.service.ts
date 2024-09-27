@@ -15,15 +15,24 @@ import { User } from '../../entities/user.entity';
 import { AuthenticationUtils } from '../../utils/Authentication';
 import { HelperUtil } from '../../utils/Helper';
 import { In, Like, Repository } from 'typeorm';
-import { CreateProduct, GetProducts } from '../../types/types';
+import {
+    CreateInventory,
+    CreateProduct,
+    GetInventory,
+    GetProducts,
+    RatingProduct,
+} from '../../types/types';
 import { Category } from '../../entities/category.entity';
 import { ProductInventory } from '../../entities/productinventory.entity';
 import { ProductRating } from '../../entities/productrating.entity';
+import { UserProfile } from '../../entities/userprofile.entity';
+import { NotificationService } from '../../utils/NotificationService';
 
 @Injectable()
 export class ProductService {
     private authenticator;
     private helperUtil;
+    private notificationService = new NotificationService();
 
     constructor(
         @InjectRepository(User) private userRepository: Repository<User>,
@@ -45,6 +54,9 @@ export class ProductService {
 
         @InjectRepository(ProductInventory)
         private inventoryRepository: Repository<ProductInventory>,
+
+        @InjectRepository(UserProfile)
+        private profileRepository: Repository<UserProfile>,
 
         @Inject(CACHE_MANAGER) private cacheManager: Cache,
     ) {
@@ -210,7 +222,10 @@ export class ProductService {
         );
 
         const averageRating =
-            ratings.reduce((acc, rating) => acc + rating, 0) / ratings.length;
+            ratings.length > 0
+                ? ratings.reduce((acc, rating) => acc + rating, 0) /
+                  ratings.length
+                : 0;
 
         const filteredComments = comments.filter(
             (comment) => comment != null && comment != undefined,
@@ -228,7 +243,7 @@ export class ProductService {
                     id: picture.picture.id,
                 })),
                 averageRating,
-                filteredComments,
+                comments: filteredComments,
             },
         };
     }
@@ -446,8 +461,10 @@ export class ProductService {
             );
 
             const averageRating =
-                ratings.reduce((acc, rating) => acc + rating, 0) /
-                ratings.length;
+                ratings.length > 0
+                    ? ratings.reduce((acc, rating) => acc + rating, 0) /
+                      ratings.length
+                    : 0;
 
             const filteredComments = comments.filter(
                 (comment) => comment != null && comment != undefined,
@@ -463,7 +480,7 @@ export class ProductService {
                 categoryId: product.category.id,
                 pictureurls,
                 averageRating,
-                filteredComments,
+                comments: filteredComments,
             });
         }
 
@@ -528,8 +545,10 @@ export class ProductService {
             );
 
             const averageRating =
-                ratings.reduce((acc, rating) => acc + rating, 0) /
-                ratings.length;
+                ratings.length > 0
+                    ? ratings.reduce((acc, rating) => acc + rating, 0) /
+                      ratings.length
+                    : 0;
 
             const filteredComments = comments.filter(
                 (comment) => comment != null && comment != undefined,
@@ -544,7 +563,7 @@ export class ProductService {
                 categoryId: product.category.id,
                 pictureurls,
                 averageRating,
-                filteredComments,
+                comments: filteredComments,
             });
         }
 
@@ -640,8 +659,10 @@ export class ProductService {
             );
 
             const averageRating =
-                ratings.reduce((acc, rating) => acc + rating, 0) /
-                ratings.length;
+                ratings.length > 0
+                    ? ratings.reduce((acc, rating) => acc + rating, 0) /
+                      ratings.length
+                    : 0;
 
             const filteredComments = comments.filter(
                 (comment) => comment != null && comment != undefined,
@@ -657,7 +678,7 @@ export class ProductService {
                 categoryId: product.category.id,
                 pictureurls,
                 averageRating,
-                filteredComments,
+                comments: filteredComments,
             });
         }
 
@@ -724,8 +745,10 @@ export class ProductService {
             );
 
             const averageRating =
-                ratings.reduce((acc, rating) => acc + rating, 0) /
-                ratings.length;
+                ratings.length > 0
+                    ? ratings.reduce((acc, rating) => acc + rating, 0) /
+                      ratings.length
+                    : 0;
 
             const filteredComments = comments.filter(
                 (comment) => comment != null && comment != undefined,
@@ -741,7 +764,7 @@ export class ProductService {
                 categoryId: product.category.id,
                 pictureurls,
                 averageRating,
-                filteredComments,
+                comments: filteredComments,
             });
         }
 
@@ -755,30 +778,90 @@ export class ProductService {
         };
     }
 
-    async addRatingandComment(
-        payload: {
-            productId: string;
-            rating: number;
-            comment?: string;
-        },
-        authHeader: string,
-    ) {
+    async addRatingandComment(payload: RatingProduct, authHeader: string) {
         const isTokenValid = await this.authenticator.validateToken(authHeader);
 
         if (isTokenValid.type != 0) {
             throw new UnauthorizedException('Unathorized');
         }
+
+        const user = await this.userRepository.findOne({
+            where: {
+                id: isTokenValid.userId,
+            },
+        });
+
+        if (!user) {
+            throw new UnauthorizedException('unauthorized');
+        }
+
+        const product = await this.productRepository.findOne({
+            where: {
+                id: payload.productId,
+            },
+        });
+
+        if (!product) {
+            throw new NotFoundException('Product not found');
+        }
+
+        let data: any = {
+            rating: payload.rating,
+            user,
+            product,
+        };
+
+        if (payload.comment) data.review = payload.comment;
+
+        const rating = await this.productratingRepository.create(data);
+
+        await this.productratingRepository.save(rating);
+
+        return {
+            message: 'Thank you for rating',
+        };
     }
 
-    async addNewStock(
-        payload: { productId: string; totalQuantity: number },
-        authHeader: string,
-    ) {
+    async addNewStock(payload: CreateInventory, authHeader: string) {
         const isTokenValid = await this.authenticator.validateToken(authHeader);
 
         if (isTokenValid.type != 2) {
-            throw new UnauthorizedException('Unathorized');
+            throw new UnauthorizedException('Unauthorized');
         }
+
+        const product = await this.productRepository.findOne({
+            where: { id: payload.productId },
+            relations: ['user'],
+        });
+
+        if (!product) {
+            throw new NotFoundException('Product not found');
+        }
+
+        const { user } = product;
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        const productInventory = await this.inventoryRepository.findOne({
+            where: { product: { id: product.id } },
+        });
+
+        if (productInventory) {
+            productInventory.totalQuantity = payload.totalQuantity;
+            productInventory.quantityInStock = payload.totalQuantity;
+            await this.inventoryRepository.save(productInventory);
+        } else {
+            const newInventory = this.inventoryRepository.create({
+                totalQuantity: payload.totalQuantity,
+                quantityInStock: payload.totalQuantity,
+                user,
+                product,
+            });
+            await this.inventoryRepository.save(newInventory);
+        }
+
+        return { message: 'Stock Updated' };
     }
 
     async requestStockUpdate(productId: string, authHeader: string) {
@@ -787,21 +870,123 @@ export class ProductService {
         if (isTokenValid.type != 3 && isTokenValid.type != 1) {
             throw new UnauthorizedException('Unathorized');
         }
+
+        const product = await this.productRepository.findOne({
+            where: { id: productId },
+            relations: ['user'],
+        });
+
+        if (!product) {
+            throw new NotFoundException('Product not found');
+        }
+
+        const profile = await this.profileRepository.findOne({
+            where: {
+                user: {
+                    id: product.user.id,
+                },
+            },
+            relations: ['user'],
+        });
+
+        if (!profile) {
+            throw new NotFoundException('User not found');
+        }
+
+        const userNotification = {
+            recipients: [`${profile.user.emailAddress}`],
+            data: {
+                name: profile.firstName,
+                product: product.product,
+            },
+        };
+
+        this.notificationService.sendrestockmessage(userNotification, () => {});
+
+        return {
+            message: 'Notification Sent',
+        };
     }
 
-    async getSellerInventory(authHeader: string) {
+    async getSellerInventory(query: GetInventory, authHeader: string) {
         const isTokenValid = await this.authenticator.validateToken(authHeader);
 
-        if (isTokenValid.type != 2) {
+        if (
+            isTokenValid.type != 2 &&
+            isTokenValid.type != 3 &&
+            isTokenValid.type != 1
+        ) {
             throw new UnauthorizedException('Unathorized');
         }
+
+        const { skip, take } = this.helperUtil.paginate(query.page, query.size);
+
+        const userId = query.sellerId || isTokenValid.userId;
+
+        const user = await this.userRepository.findOne({
+            where: {
+                id: userId,
+            },
+        });
+
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        const inventory = await this.inventoryRepository.find({
+            where: {
+                user: {
+                    id: user.id,
+                },
+            },
+            skip,
+            take,
+            relations: ['product'],
+        });
+
+        let data = [];
+        inventory.map((item) => {
+            data.push({
+                productId: item.product.id,
+                product: item.product.product,
+                quantityInStock: item.quantityInStock,
+                totalQuantity: item.totalQuantity,
+            });
+        });
+
+        return {
+            data,
+        };
     }
 
-    async getAdminInventory(authHeader: string) {
+    async getAdminInventory(query: GetInventory, authHeader: string) {
         const isTokenValid = await this.authenticator.validateToken(authHeader);
 
         if (isTokenValid.type != 3 && isTokenValid.type != 1) {
             throw new UnauthorizedException('Unathorized');
         }
+
+        const { skip, take } = this.helperUtil.paginate(query.page, query.size);
+
+        const inventory = await this.inventoryRepository.find({
+            relations: ['product', 'user'],
+            skip,
+            take,
+        });
+
+        let data = [];
+        inventory.map((item) => {
+            data.push({
+                productId: item.product.id,
+                product: item.product.product,
+                quantityInStock: item.quantityInStock,
+                totalQuantity: item.totalQuantity,
+                sellerId: item.user.id,
+            });
+        });
+
+        return {
+            data,
+        };
     }
 }

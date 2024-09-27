@@ -27,6 +27,24 @@ export class NotificationService {
         }
     }
 
+    async sendrestockmessage(
+        message: { recipients: string[]; data: any },
+        callback: (response: any) => void,
+    ): Promise<void> {
+        for (const recipient of message.recipients) {
+            const info = {
+                sender: 'noreply@bakaredev.me',
+                templateFile: 'out-of-stock.ejs',
+                subject: 'Product Out of Stock',
+                recipients: [recipient],
+                data: message.data,
+            };
+
+            const response = await this.mailer.sendMail(info);
+            callback(response);
+        }
+    }
+
     async SendActivatedAccount(
         message: { recipients: string[]; data: any },
         callback: (response: any) => void,
