@@ -19,6 +19,7 @@ import { CompletePasswordReset } from '../../users/dtos/completepassword.dto';
 import { CreateProfileDto } from '../dtos/createprofile.dto';
 import { UpdateAddressDto } from '../dtos/updateAddress.dto';
 import { CreateAddressDto } from '../dtos/createaddress.dto';
+import { GetUsersDto } from '../dtos/getusers.dto';
 
 @Controller('api/v1/user')
 export class UsersController {
@@ -27,6 +28,14 @@ export class UsersController {
     @Post()
     createUser(@Body() createUserDto: CreateUserDto) {
         return this.userService.createUserAccount(createUserDto);
+    }
+
+    @Get('/all')
+    getUsersByType(
+        @Headers('authorization') authHeader: string,
+        @Query() query: { type: number; size: number; page: number },
+    ) {
+        return this.userService.getUsersByType(query, authHeader);
     }
 
     @Post('/activate')

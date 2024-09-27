@@ -108,3 +108,9 @@ export class GetInventory {
     size: number;
     sellerId?: string;
 }
+
+export class getUsersByType {
+    page: number;
+    size: number;
+    type: number;
+}

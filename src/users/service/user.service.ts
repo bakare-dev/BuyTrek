@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../../entities/user.entity';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import {
     ActivateAccountPayload,
     CreateUserPayload,
@@ -21,6 +21,7 @@ import {
     UpdateDefaultAddress,
     UpdateAddress,
     DeleteAddress,
+    getUsersByType,
 } from '../../types/types';
 import { WinstonLoggerService } from '../../utils/Logger';
 import * as crypto from 'crypto';
@@ -218,7 +219,10 @@ export class UserService {
             data: {},
         };
 
-        this.notificationService.SendActivatedAccount(userNotification, () => {});
+        this.notificationService.SendActivatedAccount(
+            userNotification,
+            () => {},
+        );
 
         return {
             message: 'Account activated successfully',
@@ -434,11 +438,21 @@ export class UserService {
             throw new UnauthorizedException('Unauthorized');
         }
 
-        let body: { firstName?: string; lastName?: string } = {};
+        let body: any = {};
 
         if (payload.firstName) body.firstName = payload.firstName;
 
         if (payload.lastName) body.lastName = payload.lastName;
+
+        if (payload.pictureId) {
+            const picture = await this.pictureRepository.findOne({
+                where: {
+                    id: payload.pictureId,
+                },
+            });
+
+            body.picture = picture;
+        }
 
         await this.userprofileRepository.update(
             {
@@ -659,6 +673,42 @@ export class UserService {
 
         return {
             message: 'Address deleted',
+        };
+    }
+
+    async getUsersByType(query: getUsersByType, authHeader: string) {
+        const isTokenValid = await this.authenticator.validateToken(authHeader);
+
+        if (isTokenValid.type != 1 && isTokenValid.type! + 3) {
+            throw new UnauthorizedException('unauthorized');
+        }
+
+        const { skip, take } = this.helperUtil.paginate(query.page, query.size);
+
+        const users = await this.userprofileRepository.find({
+            where: {
+                user: {
+                    type: query.type,
+                },
+            },
+            skip,
+            take,
+            relations: ['picture', 'user'],
+        });
+
+        let data = [];
+        users.map((user) => {
+            data.push({
+                userId: user.user.id,
+                emailAddress: user.user.emailAddress,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                pictureurl: user.picture.url,
+            });
+        });
+
+        return {
+            data,
         };
     }
 
