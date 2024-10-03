@@ -4,7 +4,7 @@
 
 Welcome to **BuyTrek**, a powerful and scalable E-commerce API built with NestJS. BuyTrek allows business owners to join as market owners, buyers to shop from various sellers, and customer service to manage the distribution of products. This API provides the necessary endpoints to manage products, users, orders, and more, for a seamless online shopping experience.
 
-Disclaimer: Obviously this is a sample app and by no means an attempt to start a business that would require a lot of regulatory checks, this entire project is sandboxed and is just a template, no real money will be involved in this project (Obviously).
+**Disclaimer** Obviously this is a sample app and by no means an attempt to start a business that would require a lot of regulatory checks, this entire project is sandboxed and is just a template, no real money will be involved in this project, Obviously.
 
 ## Table of Contents
 
