@@ -86,7 +86,6 @@ Welcome to **BuyTrek**, a powerful and scalable E-commerce API built with NestJS
     WINSTONSOURCEID=
     REDISPORT=
     REDISURL=
-    REDISDATABASE=
     SMTP_HOST=
     SMTP_PORT=
     SMTP_USN=

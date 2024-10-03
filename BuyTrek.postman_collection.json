@@ -1,7 +1,7 @@
 {
 	"info": {
 		"_postman_id": "47247c19-6997-4077-9788-578412e57bc3",
-		"name": "BuyTrek",
+		"name": "E-Commerce-Api with Nest",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "25430877"
 	},
@@ -16,7 +16,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"emailAddress\": \"bakarepraise3@gmail.com\",\n    \"type\": 0,\n    \"password\": \"bakaretest334\"\n}",
+							"raw": "{\n    \"emailAddress\": \"sampleemail@email.com\",\n    \"type\": 0,\n    \"password\": \"bakaretest334\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -91,7 +91,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"emailAddress\": \"bakarepraise3@gmail.com\",\n    \"password\": \"newpassword\"\n}",
+							"raw": "{\n    \"emailAddress\": \"sampleemail@email.com\",\n    \"password\": \"newpassword\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -117,7 +117,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"emailAddress\": \"bakarepraise3@gmail.com\"\n}",
+							"raw": "{\n    \"emailAddress\": \"sampleemail@email.com\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
