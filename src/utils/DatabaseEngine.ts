@@ -9,7 +9,6 @@ import { Product } from '../entities/product.entity';
 import { ProductPicture } from '../entities/productpicture.entity';
 import { Cart } from '../entities/cart.entity';
 import { Order } from '../entities/order.entity';
-import { OrderAddress } from '../entities/orderaddress.entity';
 import { OrderTransaction } from '../entities/ordertransaction.entities';
 import { OrderProduct } from '../entities/orderproduct.entity';
 import { Category } from '../entities/category.entity';
@@ -41,7 +40,6 @@ export const DatabaseEngine: TypeOrmModuleOptions = {
         ProductInventory,
         Cart,
         Order,
-        OrderAddress,
         OrderTransaction,
         OrderProduct,
         Category,

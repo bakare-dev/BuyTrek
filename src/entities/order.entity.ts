@@ -5,8 +5,11 @@ import {
     ManyToOne,
     CreateDateColumn,
     UpdateDateColumn,
+    OneToOne,
+    JoinColumn,
 } from 'typeorm';
 import { User } from './user.entity';
+import { Address } from './address.entity';
 
 @Entity({ name: 'orders' })
 export class Order {
@@ -46,6 +49,10 @@ export class Order {
         | 'Delivered'
         | 'Payment Completed'
         | 'Cancelled';
+
+    @OneToOne(() => Address, (address) => address.id)
+    @JoinColumn()
+    address: Address;
 
     @CreateDateColumn({ type: 'timestamp' })
     createdAt: Date;

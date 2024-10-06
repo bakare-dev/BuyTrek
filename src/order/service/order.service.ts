@@ -12,7 +12,6 @@ import { Cache } from 'cache-manager';
 import { Address } from '../../entities/address.entity';
 import { Cart } from '../../entities/cart.entity';
 import { Order } from '../../entities/order.entity';
-import { OrderAddress } from '../../entities/orderaddress.entity';
 import { OrderProduct } from '../../entities/orderproduct.entity';
 import { OrderTransaction } from '../../entities/ordertransaction.entities';
 import { ProductPicture } from '../../entities/productpicture.entity';
@@ -52,9 +51,6 @@ export class OrderService {
 
         @InjectRepository(Order)
         private orderRepository: Repository<Order>,
-
-        @InjectRepository(OrderAddress)
-        private orderAddressRepository: Repository<OrderAddress>,
 
         @InjectRepository(OrderProduct)
         private orderproductRepository: Repository<OrderProduct>,
@@ -133,24 +129,20 @@ export class OrderService {
         description = description.trim().replace(/,$/, '');
 
         const ref = `BuyTrek-${Math.random().toString(36).substr(2, 9)}`;
-        const orderData = this.orderRepository.create({
-            orderNo: ref,
-            user,
-            totalAmount,
-            description,
-        });
-        const order = await this.orderRepository.save(orderData);
 
         const userDefaultAddress = await this.addressRepository.findOne({
             where: { user: { id: user.id }, isDefault: true },
         });
 
-        const orderAddressData = this.orderAddressRepository.create({
-            order,
+        const orderData = this.orderRepository.create({
+            orderNo: ref,
+            user,
+            totalAmount,
+            description,
             address: userDefaultAddress,
         });
-        const orderaddress =
-            await this.orderAddressRepository.save(orderAddressData);
+
+        const order = await this.orderRepository.save(orderData);
 
         const orderProductsData = Array.from(cartProducts.values()).map(
             ({ product, quantity }) => ({
@@ -182,8 +174,6 @@ export class OrderService {
                 callback_url: this.url + '/orders',
             },
         };
-
-        const addressId = orderaddress.id;
 
         try {
             const paystackResponse = await lastValueFrom(
@@ -243,7 +233,6 @@ export class OrderService {
             await this.orderproductRepository.delete({
                 order: { id: order.id },
             });
-            await this.orderAddressRepository.delete(addressId);
             await this.orderRepository.delete(order.id);
 
             throw new BadRequestException(
@@ -436,9 +425,6 @@ export class OrderService {
                 order: { id: order.id },
             });
             await this.orderproductRepository.delete({
-                order: { id: order.id },
-            });
-            await this.orderAddressRepository.delete({
                 order: { id: order.id },
             });
             await this.orderRepository.delete(order.id);
@@ -801,6 +787,7 @@ export class OrderService {
             where: {
                 id: orderId,
             },
+            relations: ['address'],
         });
 
         if (!order) {
@@ -841,14 +828,7 @@ export class OrderService {
             });
         }
 
-        const orderAddress = await this.orderAddressRepository.findOne({
-            where: {
-                order: {
-                    id: order.id,
-                },
-            },
-            relations: ['address'],
-        });
+        const orderAddress = order.address;
 
         let nextAction: string;
 
@@ -870,7 +850,7 @@ export class OrderService {
                 status: order.status,
                 products,
                 nextAction,
-                address: orderAddress.address.address,
+                address: orderAddress.address,
             },
         };
     }

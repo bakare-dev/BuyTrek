@@ -10,7 +10,6 @@ import { Product } from '../entities/product.entity';
 import { Cart } from '../entities/cart.entity';
 import { Order } from '../entities/order.entity';
 import { Transaction } from '../entities/transaction.entity';
-import { OrderAddress } from '../entities/orderaddress.entity';
 import { OrderProduct } from '../entities/orderproduct.entity';
 import { OrderTransaction } from '../entities/ordertransaction.entities';
 import { ProductPicture } from '../entities/productpicture.entity';
@@ -30,7 +29,6 @@ import { ProductInventory } from '../entities/productinventory.entity';
             Cart,
             Order,
             Transaction,
-            OrderAddress,
             OrderProduct,
             OrderTransaction,
             ProductPicture,
