@@ -80,6 +80,6 @@ export default {
             '/api/v1/user/complete-password-reset',
             // '/',
         ],
-        saltLength: 10,
+        saltLength: process.env.SALT_LENGTH,
     },
 };
